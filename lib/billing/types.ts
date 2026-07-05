@@ -1,4 +1,4 @@
-export const FREE_GENERATION_LIMIT = 3;
+export const FREE_GENERATION_LIMIT = 999;
 export const PAID_ACCESS_DAYS = 31;
 export const PAYWALL_PRICE_PENCE = 999;
 export const PAYWALL_CURRENCY = "gbp";
