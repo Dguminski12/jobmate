@@ -17,6 +17,10 @@ export const metadata: Metadata = {
   title: "JobMate | AI Job & Interview Coach",
   description:
     "Upload your CV and job descriptions to generate tailored cover letters, interview questions, and STAR answers.",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({

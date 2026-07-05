@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SiteBrand from "@/components/brand/site-brand";
 import ThemeToggle from "@/components/theme/theme-toggle";
 
 export default function Home() {
@@ -8,17 +9,7 @@ export default function Home() {
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[32rem] bg-[linear-gradient(135deg,_rgba(15,23,42,0.06),_rgba(15,23,42,0))] dark:bg-[linear-gradient(135deg,_rgba(15,23,42,0.34),_rgba(15,23,42,0))]" />
 
       <header className="sticky top-0 z-50 mx-auto flex w-full max-w-7xl items-center justify-between rounded-[2rem] border border-slate-200/80 bg-white/90 px-6 py-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl lg:px-10 dark:border-slate-800 dark:bg-slate-950/85 dark:shadow-[0_18px_50px_rgba(2,6,23,0.4)]">
-        <Link href="/" className="group inline-flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-slate-950 text-sm font-semibold text-white shadow-[0_18px_50px_rgba(15,23,42,0.18)] dark:border-slate-700 dark:bg-slate-900">
-            JM
-          </span>
-          <span className="flex flex-col leading-tight">
-            <span className="text-sm font-semibold tracking-[0.28em] text-slate-500 uppercase dark:text-slate-400">
-              JobMate
-            </span>
-            <span className="text-xs text-slate-500 dark:text-slate-400">AI Job & Interview Coach</span>
-          </span>
-        </Link>
+        <SiteBrand />
 
         <nav className="hidden items-center gap-8 text-sm text-slate-600 md:flex dark:text-slate-400">
           <a className="transition hover:text-slate-950" href="#features">

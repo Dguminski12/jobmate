@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import SiteBrand from "@/components/brand/site-brand";
 import RegisterForm from "@/components/auth/register-form";
 import ThemeToggle from "@/components/theme/theme-toggle";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -22,14 +23,7 @@ export default async function RegisterPage() {
       <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-6xl items-center">
         <div className="grid w-full gap-8 lg:grid-cols-[0.95fr_1.05fr]">
           <section className="flex flex-col justify-center">
-            <Link href="/" className="inline-flex w-fit items-center gap-3">
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-sm font-semibold text-white">
-                JM
-              </span>
-              <span className="text-sm font-semibold tracking-[0.28em] text-slate-500 uppercase">
-                JobMate
-              </span>
-            </Link>
+            <SiteBrand href="/" showSubtitle={false} />
 
             <h1 className="mt-8 max-w-xl text-5xl font-semibold tracking-tight md:text-6xl">
               Create your account and start building better applications.

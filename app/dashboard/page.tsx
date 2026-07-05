@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import SiteBrand from "@/components/brand/site-brand";
 import SignOutButton from "@/components/auth/sign-out-button";
 import ThemeToggle from "@/components/theme/theme-toggle";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -82,14 +82,7 @@ export default async function DashboardPage({
       <div className="mx-auto w-full max-w-6xl">
         <header className="flex flex-col gap-4 rounded-[2rem] border border-white/80 bg-white/90 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.12)] backdrop-blur-xl md:flex-row md:items-center md:justify-between md:p-8">
           <div>
-            <Link href="/" className="inline-flex items-center gap-3">
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-sm font-semibold text-white">
-                JM
-              </span>
-              <span className="text-sm font-semibold tracking-[0.28em] text-slate-500 uppercase">
-                JobMate
-              </span>
-            </Link>
+            <SiteBrand href="/" showSubtitle={false} />
             <h1 className="mt-5 text-3xl font-semibold tracking-tight md:text-4xl">
               Welcome back, {displayName}.
             </h1>
