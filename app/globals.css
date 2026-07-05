@@ -77,6 +77,14 @@ html.dark .shadow-\[0_30px_80px_rgba\(15\,23\,42\,0\.14\)\] {
   box-shadow: 0 16px 48px rgba(2, 6, 23, 0.45) !important;
 }
 
+html.dark .border-slate-900.bg-slate-900.text-white,
+html.dark .bg-slate-900.text-white {
+  border-color: rgba(103, 232, 249, 0.6) !important;
+  background-color: rgba(34, 211, 238, 0.2) !important;
+  color: #cffafe !important;
+  box-shadow: 0 10px 30px rgba(34, 211, 238, 0.25) !important;
+}
+
 .landing-register-button {
   background-color: #0f172a;
   color: #fff;
