@@ -1,14 +1,20 @@
 "use client";
 
 import { useActionState, useMemo, useState } from "react";
-import { generateInterviewPackAction } from "@/app/dashboard/actions";
+import { addInterviewPackToTrackerAction, generateInterviewPackAction } from "@/app/dashboard/actions";
 import type {
+  AddPackToTrackerActionState,
   GenerateInterviewPackActionState,
   InterviewPackContent,
   InterviewPackRecord,
 } from "@/lib/interview-packs/types";
 
 const initialState: GenerateInterviewPackActionState = {
+  status: "idle",
+  message: "",
+};
+
+const addToTrackerInitialState: AddPackToTrackerActionState = {
   status: "idle",
   message: "",
 };
@@ -60,10 +66,45 @@ function SectionCard({ title, children }: { title: string; children: React.React
 }
 
 function InterviewPackView({ pack }: { pack: InterviewPackRecord }) {
+  const [trackerState, trackerAction, isAddingToTracker] = useActionState(
+    addInterviewPackToTrackerAction,
+    addToTrackerInitialState,
+  );
   const content = pack.ai_response as InterviewPackContent;
 
   return (
     <div className="grid gap-4">
+      <section className="rounded-[1.75rem] border border-cyan-200 bg-cyan-50/80 p-5 shadow-[0_18px_50px_rgba(6,78,99,0.08)] backdrop-blur-xl md:p-6">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h3 className="text-lg font-semibold tracking-tight text-cyan-950">Send This Pack to Job Tracker</h3>
+            <p className="mt-2 text-sm text-cyan-900/80">
+              Create a tracker entry from this pack with prefilled role details and prep notes.
+            </p>
+          </div>
+          <form action={trackerAction}>
+            <input type="hidden" name="packId" value={pack.id} />
+            <button
+              type="submit"
+              disabled={isAddingToTracker}
+              className="rounded-full bg-cyan-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-cyan-900 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isAddingToTracker ? "Adding..." : "Add to Job Tracker"}
+            </button>
+          </form>
+        </div>
+        {trackerState.status === "success" ? (
+          <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+            {trackerState.message}
+          </p>
+        ) : null}
+        {trackerState.status === "error" ? (
+          <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            {trackerState.message}
+          </p>
+        ) : null}
+      </section>
+
       <SectionCard title="Cover Letter">
         <pre className="whitespace-pre-wrap font-sans text-sm leading-7 text-slate-700">{content.coverLetter}</pre>
       </SectionCard>
@@ -160,9 +201,12 @@ export default function InterviewPackWorkspace({ packs, packsTableMissing }: Int
     return packs;
   }, [packs, state]);
 
-  const selectedPack =
-    allPacks.find((pack) => pack.id === selectedPackId) ??
-    (state.status === "success" ? state.pack ?? null : allPacks[0] ?? null);
+  const fallbackPack = state.status === "success" ? state.pack ?? allPacks[0] ?? null : allPacks[0] ?? null;
+  const selectedPack = selectedPackId ? allPacks.find((pack) => pack.id === selectedPackId) ?? fallbackPack : null;
+
+  function handlePackSelection(packId: string) {
+    setSelectedPackId((previous) => (previous === packId ? null : packId));
+  }
 
   function nextStep() {
     setCurrentStep((previous) => Math.min(4, previous + 1));
@@ -397,8 +441,21 @@ export default function InterviewPackWorkspace({ packs, packsTableMissing }: Int
 
       <section className="grid gap-6 lg:grid-cols-[320px_1fr]">
         <aside className="rounded-[2rem] border border-white/80 bg-white/90 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl">
-          <h3 className="text-lg font-semibold tracking-tight text-slate-950">Saved Interview Packs</h3>
-          <p className="mt-2 text-sm text-slate-600">Revisit previous packs and continue preparing.</p>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-semibold tracking-tight text-slate-950">Saved Interview Packs</h3>
+              <p className="mt-2 text-sm text-slate-600">Revisit previous packs and continue preparing.</p>
+            </div>
+            {selectedPack ? (
+              <button
+                type="button"
+                onClick={() => setSelectedPackId(null)}
+                className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
+              >
+                Hide
+              </button>
+            ) : null}
+          </div>
           <div className="mt-4 space-y-2">
             {allPacks.length === 0 ? (
               <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">
@@ -409,7 +466,7 @@ export default function InterviewPackWorkspace({ packs, packsTableMissing }: Int
                 <button
                   key={pack.id}
                   type="button"
-                  onClick={() => setSelectedPackId(pack.id)}
+                  onClick={() => handlePackSelection(pack.id)}
                   className={`w-full rounded-xl border px-4 py-3 text-left transition ${
                     selectedPack?.id === pack.id
                       ? "border-slate-900 bg-slate-900 text-white"
@@ -434,7 +491,7 @@ export default function InterviewPackWorkspace({ packs, packsTableMissing }: Int
 
         <div>
           {selectedPack ? (
-            <InterviewPackView pack={selectedPack} />
+            <InterviewPackView key={selectedPack.id} pack={selectedPack} />
           ) : (
             <div className="rounded-[2rem] border border-dashed border-slate-300 bg-white/80 p-10 text-center text-sm text-slate-600">
               Select a pack to view generated content.

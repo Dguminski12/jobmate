@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import SignOutButton from "@/components/auth/sign-out-button";
+import ThemeToggle from "@/components/theme/theme-toggle";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import JobsDashboard from "@/components/jobs/jobs-dashboard";
 import InterviewPackWorkspace from "@/components/interview-packs/interview-pack-workspace";
@@ -97,7 +98,10 @@ export default async function DashboardPage({
             </p>
           </div>
 
-          <SignOutButton />
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <SignOutButton />
+          </div>
         </header>
 
         <InterviewPackWorkspace packs={interviewPacks} packsTableMissing={interviewPacksTableMissing} />

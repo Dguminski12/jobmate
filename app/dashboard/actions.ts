@@ -4,10 +4,10 @@ import { revalidatePath } from "next/cache";
 import { createJobForUser, deleteJobForUser, getAuthedClient, updateJobForUser } from "@/lib/jobs/server";
 import { createJobSchema, deleteJobSchema, updateJobSchema } from "@/lib/jobs/validation";
 import type { JobActionState, JobDeleteActionState } from "@/lib/jobs/types";
-import { createInterviewPackForUser } from "@/lib/interview-packs/server";
+import { createInterviewPackForUser, getInterviewPackForUserById } from "@/lib/interview-packs/server";
 import { generateInterviewPack } from "@/lib/interview-packs/service";
 import { generateInterviewPackSchema } from "@/lib/interview-packs/validation";
-import type { GenerateInterviewPackActionState } from "@/lib/interview-packs/types";
+import type { AddPackToTrackerActionState, GenerateInterviewPackActionState } from "@/lib/interview-packs/types";
 import { extractCvTextFromFile, toImageDataUrls } from "@/lib/interview-packs/parsing";
 
 function collectFormData(formData: FormData) {
@@ -232,5 +232,106 @@ export async function generateInterviewPackAction(
     };
   } catch (error) {
     return returnGenerateError(error instanceof Error ? error.message : "Unable to generate interview pack.");
+  }
+}
+
+function returnAddPackError(message: string): AddPackToTrackerActionState {
+  return {
+    status: "error",
+    message,
+  };
+}
+
+function buildCompanyNameFromUrl(url?: string | null) {
+  if (!url) {
+    return "Unknown Company";
+  }
+
+  try {
+    const hostname = new URL(url).hostname.replace("www.", "");
+    const firstSegment = hostname.split(".")[0] ?? "Unknown Company";
+    return firstSegment.charAt(0).toUpperCase() + firstSegment.slice(1);
+  } catch {
+    return "Unknown Company";
+  }
+}
+
+function buildJobTitleFromPack(packTitle: string) {
+  const separators = [" - ", " | ", " – "];
+
+  for (const separator of separators) {
+    if (packTitle.includes(separator)) {
+      return packTitle.split(separator)[0]?.trim() || packTitle;
+    }
+  }
+
+  return packTitle.trim();
+}
+
+function normalizeOptionalUrl(url?: string | null) {
+  if (!url) {
+    return "";
+  }
+
+  try {
+    new URL(url);
+    return url;
+  } catch {
+    return "";
+  }
+}
+
+export async function addInterviewPackToTrackerAction(
+  _previousState: AddPackToTrackerActionState,
+  formData: FormData,
+): Promise<AddPackToTrackerActionState> {
+  const packId = normalizeTextInput(formData.get("packId"));
+
+  if (!packId) {
+    return returnAddPackError("Missing interview pack id.");
+  }
+
+  const { user } = await getAuthedClient();
+
+  try {
+    const pack = await getInterviewPackForUserById(packId, user.id);
+
+    if (!pack) {
+      return returnAddPackError("Interview pack not found.");
+    }
+
+    const content = pack.ai_response;
+    const notesParts = [
+      `Generated from Interview Pack: ${pack.title}`,
+      content?.roleSummary ? `Role summary: ${content.roleSummary}` : "",
+      content?.companyResearch ? `Company research: ${content.companyResearch}` : "",
+    ].filter((value) => value.length > 0);
+
+    const followUp = content?.interviewChecklist?.[0] ?? "Review interview pack and tailor prep plan.";
+
+    await createJobForUser(
+      {
+        company: buildCompanyNameFromUrl(pack.job_url),
+        jobTitle: buildJobTitleFromPack(pack.title),
+        location: "Not specified",
+        salary: "",
+        employmentType: "Full-time",
+        applicationDate: new Date().toISOString().slice(0, 10),
+        status: "Wishlist",
+        jobUrl: normalizeOptionalUrl(pack.job_url),
+        notes: notesParts.join("\n\n"),
+        nextAction: followUp,
+      },
+      user.id,
+    );
+
+    revalidatePath("/dashboard");
+
+    return {
+      status: "success",
+      message: "Interview Pack added to your Job Tracker.",
+    };
+  } catch (error) {
+    return returnAddPackError(error instanceof Error ? error.message : "Unable to add this pack to tracker.");
   }
 }

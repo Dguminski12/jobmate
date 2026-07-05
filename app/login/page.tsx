@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import LoginForm from "@/components/auth/login-form";
+import ThemeToggle from "@/components/theme/theme-toggle";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function LoginPage() {
@@ -15,6 +16,9 @@ export default async function LoginPage() {
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.14),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef5ff_100%)] px-6 py-10 text-slate-950">
+      <div className="mx-auto flex w-full max-w-6xl justify-end">
+        <ThemeToggle />
+      </div>
       <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-6xl items-center">
         <div className="grid w-full gap-8 lg:grid-cols-[0.95fr_1.05fr]">
           <section className="flex flex-col justify-center">

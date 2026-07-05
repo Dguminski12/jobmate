@@ -18,6 +18,22 @@ export async function getInterviewPacksForUser(userId: string): Promise<Intervie
   return (data ?? []) as InterviewPackRecord[];
 }
 
+export async function getInterviewPackForUserById(packId: string, userId: string): Promise<InterviewPackRecord | null> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("interview_packs")
+    .select("*")
+    .eq("id", packId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data as InterviewPackRecord | null) ?? null;
+}
+
 export async function createInterviewPackForUser(input: CreateInterviewPackInput, userId: string): Promise<InterviewPackRecord> {
   const supabase = await createSupabaseServerClient();
 

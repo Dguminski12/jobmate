@@ -66,3 +66,8 @@ export type GenerateInterviewPackActionState = {
   fieldErrors?: Partial<Record<"title" | "cvText" | "cvFile" | "jobDetails", string>>;
   pack?: InterviewPackRecord;
 };
+
+export type AddPackToTrackerActionState = {
+  status: "idle" | "success" | "error";
+  message: string;
+};
