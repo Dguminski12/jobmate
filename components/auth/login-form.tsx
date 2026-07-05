@@ -48,12 +48,12 @@ export default function LoginForm() {
         return;
       }
 
-      window.location.assign("/dashboard");
+      window.location.assign("/dashboard/packs");
     });
   }
 
   return (
-    <form className="mt-8 space-y-4" onSubmit={handleSubmit} noValidate>
+    <form method="post" className="mt-8 space-y-4" onSubmit={handleSubmit} noValidate>
       <label className="block">
         <span className="mb-2 block text-sm font-medium text-slate-700">Email</span>
         <input

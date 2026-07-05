@@ -43,12 +43,11 @@ export default async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isAuthPage = pathname === "/login" || pathname === "/register";
   const isDashboard = pathname.startsWith("/dashboard");
   const isHomePage = pathname === "/";
 
-  if ((isHomePage || isAuthPage) && user) {
-    const redirectResponse = NextResponse.redirect(new URL("/dashboard", request.url));
+  if (isHomePage && user) {
+    const redirectResponse = NextResponse.redirect(new URL("/dashboard/packs", request.url));
     copyCookies(response, redirectResponse);
     return redirectResponse;
   }

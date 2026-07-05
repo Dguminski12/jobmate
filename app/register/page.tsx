@@ -1,20 +1,9 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import SiteBrand from "@/components/brand/site-brand";
 import RegisterForm from "@/components/auth/register-form";
 import ThemeToggle from "@/components/theme/theme-toggle";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export default async function RegisterPage() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (user) {
-    redirect("/dashboard");
-  }
-
+export default function RegisterPage() {
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(45,212,191,0.16),transparent_30%),linear-gradient(180deg,#f8fafc_0%,#eef5ff_100%)] px-6 py-10 text-slate-950">
       <div className="mx-auto flex w-full max-w-6xl justify-end">

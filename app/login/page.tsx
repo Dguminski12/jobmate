@@ -1,20 +1,9 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import SiteBrand from "@/components/brand/site-brand";
 import LoginForm from "@/components/auth/login-form";
 import ThemeToggle from "@/components/theme/theme-toggle";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export default async function LoginPage() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (user) {
-    redirect("/dashboard");
-  }
-
+export default function LoginPage() {
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.14),transparent_30%),linear-gradient(180deg,#f8fafc_0%,#eef5ff_100%)] px-6 py-10 text-slate-950">
       <div className="mx-auto flex w-full max-w-6xl justify-end">
