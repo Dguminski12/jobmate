@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { CreateInterviewPackInput, InterviewPackRecord } from "./types";
+import type { CreateInterviewPackInput, InterviewPackContent, InterviewPackRecord } from "./types";
 
 export async function getInterviewPacksForUser(userId: string): Promise<InterviewPackRecord[]> {
   const supabase = await createSupabaseServerClient();
@@ -60,4 +60,42 @@ export async function createInterviewPackForUser(input: CreateInterviewPackInput
   }
 
   return data as InterviewPackRecord;
+}
+
+export async function updateInterviewPackForUser(
+  packId: string,
+  userId: string,
+  input: {
+    additionalInstructions?: string;
+    aiResponse: InterviewPackContent;
+  },
+): Promise<InterviewPackRecord> {
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase
+    .from("interview_packs")
+    .update({
+      additional_instructions: input.additionalInstructions ?? null,
+      ai_response: input.aiResponse,
+      status: "ready",
+    })
+    .eq("id", packId)
+    .eq("user_id", userId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data as InterviewPackRecord;
+}
+
+export async function deleteInterviewPackForUser(packId: string, userId: string): Promise<void> {
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("interview_packs").delete().eq("id", packId).eq("user_id", userId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }

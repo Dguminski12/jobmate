@@ -51,4 +51,14 @@ export const generateInterviewPackSchema = z
     }
   });
 
+export const regenerateInterviewPackSchema = z.object({
+  packId: z.string().uuid("Missing interview pack id."),
+  additionalPrompt: z.string().trim().min(10, "Add at least 10 characters of guidance.").max(4000),
+});
+
+export const deleteInterviewPackSchema = z.object({
+  packId: z.string().uuid("Missing interview pack id."),
+});
+
 export type GenerateInterviewPackInput = z.infer<typeof generateInterviewPackSchema>;
+export type RegenerateInterviewPackInput = z.infer<typeof regenerateInterviewPackSchema>;

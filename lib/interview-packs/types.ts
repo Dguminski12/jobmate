@@ -71,3 +71,16 @@ export type AddPackToTrackerActionState = {
   status: "idle" | "success" | "error";
   message: string;
 };
+
+export type RegenerateInterviewPackActionState = {
+  status: "idle" | "success" | "error";
+  message: string;
+  fieldErrors?: Partial<Record<"additionalPrompt", string>>;
+  pack?: InterviewPackRecord;
+};
+
+export type DeleteInterviewPackActionState = {
+  status: "idle" | "success" | "error";
+  message: string;
+  deletedPackId?: string;
+};

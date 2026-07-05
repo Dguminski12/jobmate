@@ -1,13 +1,20 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { addInterviewPackToTrackerAction, generateInterviewPackAction } from "@/app/dashboard/actions";
+import {
+  addInterviewPackToTrackerAction,
+  deleteInterviewPackAction,
+  generateInterviewPackAction,
+  regenerateInterviewPackAction,
+} from "@/app/dashboard/actions";
 import type {
   AddPackToTrackerActionState,
   CVSource,
+  DeleteInterviewPackActionState,
   GenerateInterviewPackActionState,
   InterviewPackContent,
   InterviewPackRecord,
+  RegenerateInterviewPackActionState,
 } from "@/lib/interview-packs/types";
 
 const initialState: GenerateInterviewPackActionState = {
@@ -16,6 +23,16 @@ const initialState: GenerateInterviewPackActionState = {
 };
 
 const addToTrackerInitialState: AddPackToTrackerActionState = {
+  status: "idle",
+  message: "",
+};
+
+const regeneratePackInitialState: RegenerateInterviewPackActionState = {
+  status: "idle",
+  message: "",
+};
+
+const deletePackInitialState: DeleteInterviewPackActionState = {
   status: "idle",
   message: "",
 };
@@ -181,7 +198,23 @@ function SectionCard({ title, children }: { title: string; children: React.React
   );
 }
 
-function InterviewPackView({ pack }: { pack: InterviewPackRecord }) {
+function InterviewPackView({
+  pack,
+  regenerateAction,
+  regenerateState,
+  isRegenerating,
+  deletePackAction,
+  deletePackState,
+  isDeletingPack,
+}: {
+  pack: InterviewPackRecord;
+  regenerateAction: (formData: FormData) => void;
+  regenerateState: RegenerateInterviewPackActionState;
+  isRegenerating: boolean;
+  deletePackAction: (formData: FormData) => void;
+  deletePackState: DeleteInterviewPackActionState;
+  isDeletingPack: boolean;
+}) {
   const [trackerState, trackerAction, isAddingToTracker] = useActionState(
     addInterviewPackToTrackerAction,
     addToTrackerInitialState,
@@ -190,6 +223,79 @@ function InterviewPackView({ pack }: { pack: InterviewPackRecord }) {
 
   return (
     <div className="grid gap-4">
+      <section className="rounded-[1.75rem] border border-slate-200 bg-slate-50/80 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)] backdrop-blur-xl md:p-6">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold tracking-tight text-slate-950">Refine This Pack</h3>
+            <p className="mt-2 text-sm text-slate-700">
+              Add a follow-up prompt and regenerate this pack with more focused guidance.
+            </p>
+          </div>
+          <form
+            action={deletePackAction}
+            onSubmit={(event) => {
+              if (!window.confirm("Delete this interview pack? This cannot be undone.")) {
+                event.preventDefault();
+              }
+            }}
+          >
+            <input type="hidden" name="packId" value={pack.id} />
+            <button
+              type="submit"
+              disabled={isDeletingPack}
+              className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-700 transition hover:border-rose-400 hover:text-rose-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isDeletingPack ? "Deleting..." : "Delete pack"}
+            </button>
+          </form>
+        </div>
+
+        <form action={regenerateAction} className="mt-4">
+          <input type="hidden" name="packId" value={pack.id} />
+          <textarea
+            name="additionalPrompt"
+            rows={4}
+            defaultValue={pack.additional_instructions ?? ""}
+            placeholder="Example: Focus on leadership examples and keep outputs concise in UK English."
+            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+          />
+          {regenerateState.fieldErrors?.additionalPrompt ? (
+            <p className="mt-2 text-sm text-rose-600">{regenerateState.fieldErrors.additionalPrompt}</p>
+          ) : null}
+
+          <div className="mt-3 flex justify-end">
+            <button
+              type="submit"
+              disabled={isRegenerating}
+              className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isRegenerating ? "Regenerating..." : "Regenerate pack"}
+            </button>
+          </div>
+        </form>
+
+        {regenerateState.status === "success" ? (
+          <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+            {regenerateState.message}
+          </p>
+        ) : null}
+        {regenerateState.status === "error" ? (
+          <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            {regenerateState.message}
+          </p>
+        ) : null}
+        {deletePackState.status === "success" ? (
+          <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+            {deletePackState.message}
+          </p>
+        ) : null}
+        {deletePackState.status === "error" ? (
+          <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            {deletePackState.message}
+          </p>
+        ) : null}
+      </section>
+
       <section className="rounded-[1.75rem] border border-cyan-200 bg-cyan-50/80 p-5 shadow-[0_18px_50px_rgba(6,78,99,0.08)] backdrop-blur-xl md:p-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
@@ -303,12 +409,21 @@ function InterviewPackView({ pack }: { pack: InterviewPackRecord }) {
 
 export default function InterviewPackWorkspace({ packs, packsTableMissing }: InterviewPackWorkspaceProps) {
   const [state, formAction, isPending] = useActionState(generateInterviewPackAction, initialState);
+  const [regenerateState, regenerateAction, isRegenerating] = useActionState(
+    regenerateInterviewPackAction,
+    regeneratePackInitialState,
+  );
+  const [deletePackState, deletePackAction, isDeletingPack] = useActionState(
+    deleteInterviewPackAction,
+    deletePackInitialState,
+  );
   const [currentStep, setCurrentStep] = useState(1);
   const [cvMode, setCvMode] = useState<"file" | "text">("file");
   const [cvFileName, setCvFileName] = useState<string | null>(null);
   const [cvText, setCvText] = useState<string | null>(null);
   const [screenshotNames, setScreenshotNames] = useState<string[]>([]);
   const [selectedPackId, setSelectedPackId] = useState<string | null>(packs[0]?.id ?? null);
+  const [isPackHidden, setIsPackHidden] = useState(false);
   const persistedCvDraft = usePersistedCvDraft();
   const latestSavedCvDraft = state.status === "success" && state.pack
     ? {
@@ -345,18 +460,49 @@ export default function InterviewPackWorkspace({ packs, packsTableMissing }: Int
   }, [state]);
 
   const allPacks = useMemo(() => {
+    let nextPacks = packs;
+
     if (state.status === "success" && state.pack) {
-      return [state.pack, ...packs.filter((pack) => pack.id !== state.pack?.id)];
+      nextPacks = [state.pack, ...nextPacks.filter((pack) => pack.id !== state.pack?.id)];
     }
 
-    return packs;
-  }, [packs, state]);
+    if (regenerateState.status === "success" && regenerateState.pack) {
+      nextPacks = nextPacks.map((pack) => (pack.id === regenerateState.pack?.id ? regenerateState.pack : pack));
+    }
 
-  const fallbackPack = state.status === "success" ? state.pack ?? allPacks[0] ?? null : allPacks[0] ?? null;
-  const selectedPack = selectedPackId ? allPacks.find((pack) => pack.id === selectedPackId) ?? fallbackPack : null;
+    if (deletePackState.status === "success" && deletePackState.deletedPackId) {
+      nextPacks = nextPacks.filter((pack) => pack.id !== deletePackState.deletedPackId);
+    }
+
+    return nextPacks;
+  }, [packs, state, regenerateState, deletePackState]);
+
+  const fallbackPack =
+    allPacks[0] ??
+    null;
+
+  const latestActionPack =
+    (regenerateState.status === "success" ? regenerateState.pack : null) ??
+    (state.status === "success" ? state.pack : null) ??
+    null;
+
+  const resolvedSelectedPackId = selectedPackId && allPacks.some((pack) => pack.id === selectedPackId) ? selectedPackId : null;
+  const selectedPack = latestActionPack
+    ? latestActionPack
+    : isPackHidden
+      ? null
+      : resolvedSelectedPackId
+        ? allPacks.find((pack) => pack.id === resolvedSelectedPackId) ?? fallbackPack
+        : fallbackPack;
 
   function handlePackSelection(packId: string) {
-    setSelectedPackId((previous) => (previous === packId ? null : packId));
+    if (selectedPackId === packId) {
+      setIsPackHidden((previous) => !previous);
+      return;
+    }
+
+    setSelectedPackId(packId);
+    setIsPackHidden(false);
   }
 
   function nextStep() {
@@ -604,7 +750,7 @@ export default function InterviewPackWorkspace({ packs, packsTableMissing }: Int
             {selectedPack ? (
               <button
                 type="button"
-                onClick={() => setSelectedPackId(null)}
+                onClick={() => setIsPackHidden(true)}
                 className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
               >
                 Hide
@@ -623,13 +769,13 @@ export default function InterviewPackWorkspace({ packs, packsTableMissing }: Int
                   type="button"
                   onClick={() => handlePackSelection(pack.id)}
                   className={`w-full rounded-xl border px-4 py-3 text-left transition ${
-                    selectedPack?.id === pack.id
+                    resolvedSelectedPackId === pack.id
                       ? "border-slate-900 bg-slate-900 text-white"
                       : "border-slate-200 bg-white text-slate-700 hover:border-slate-400"
                   }`}
                 >
                   <p className="text-sm font-semibold">{pack.title}</p>
-                  <p className={`mt-1 text-xs ${selectedPack?.id === pack.id ? "text-slate-300" : "text-slate-500"}`}>
+                  <p className={`mt-1 text-xs ${resolvedSelectedPackId === pack.id ? "text-slate-300" : "text-slate-500"}`}>
                     <time dateTime={pack.created_at} suppressHydrationWarning>
                       {formatPackCreatedAt(pack.created_at)}
                     </time>
@@ -642,7 +788,16 @@ export default function InterviewPackWorkspace({ packs, packsTableMissing }: Int
 
         <div>
           {selectedPack ? (
-            <InterviewPackView key={selectedPack.id} pack={selectedPack} />
+            <InterviewPackView
+              key={selectedPack.id}
+              pack={selectedPack}
+              regenerateAction={regenerateAction}
+              regenerateState={regenerateState}
+              isRegenerating={isRegenerating}
+              deletePackAction={deletePackAction}
+              deletePackState={deletePackState}
+              isDeletingPack={isDeletingPack}
+            />
           ) : (
             <div className="rounded-4xl border border-dashed border-slate-300 bg-white/80 p-10 text-center text-sm text-slate-600">
               Select a pack to view generated content.

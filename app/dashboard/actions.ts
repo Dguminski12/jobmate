@@ -4,10 +4,24 @@ import { revalidatePath } from "next/cache";
 import { createJobForUser, deleteJobForUser, getAuthedClient, updateJobForUser } from "@/lib/jobs/server";
 import { createJobSchema, deleteJobSchema, updateJobSchema } from "@/lib/jobs/validation";
 import type { JobActionState, JobDeleteActionState } from "@/lib/jobs/types";
-import { createInterviewPackForUser, getInterviewPackForUserById } from "@/lib/interview-packs/server";
+import {
+  createInterviewPackForUser,
+  deleteInterviewPackForUser,
+  getInterviewPackForUserById,
+  updateInterviewPackForUser,
+} from "@/lib/interview-packs/server";
 import { generateInterviewPack } from "@/lib/interview-packs/service";
-import { generateInterviewPackSchema } from "@/lib/interview-packs/validation";
-import type { AddPackToTrackerActionState, GenerateInterviewPackActionState } from "@/lib/interview-packs/types";
+import {
+  deleteInterviewPackSchema,
+  generateInterviewPackSchema,
+  regenerateInterviewPackSchema,
+} from "@/lib/interview-packs/validation";
+import type {
+  AddPackToTrackerActionState,
+  DeleteInterviewPackActionState,
+  GenerateInterviewPackActionState,
+  RegenerateInterviewPackActionState,
+} from "@/lib/interview-packs/types";
 import { extractCvTextFromFile, toImageDataUrls } from "@/lib/interview-packs/parsing";
 
 function collectFormData(formData: FormData) {
@@ -246,6 +260,119 @@ function returnAddPackError(message: string): AddPackToTrackerActionState {
     status: "error",
     message,
   };
+}
+
+function returnDeletePackError(message: string): DeleteInterviewPackActionState {
+  return {
+    status: "error",
+    message,
+  };
+}
+
+function returnRegeneratePackError(
+  message: string,
+  fieldErrors?: RegenerateInterviewPackActionState["fieldErrors"],
+): RegenerateInterviewPackActionState {
+  return {
+    status: "error",
+    message,
+    fieldErrors,
+  };
+}
+
+export async function deleteInterviewPackAction(
+  _previousState: DeleteInterviewPackActionState,
+  formData: FormData,
+): Promise<DeleteInterviewPackActionState> {
+  const parsed = deleteInterviewPackSchema.safeParse({
+    packId: normalizeTextInput(formData.get("packId")),
+  });
+
+  if (!parsed.success) {
+    return returnDeletePackError("Missing interview pack details.");
+  }
+
+  const { user } = await getAuthedClient();
+
+  try {
+    await deleteInterviewPackForUser(parsed.data.packId, user.id);
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/packs");
+
+    return {
+      status: "success",
+      message: "Interview Pack deleted.",
+      deletedPackId: parsed.data.packId,
+    };
+  } catch (error) {
+    return returnDeletePackError(error instanceof Error ? error.message : "Unable to delete this interview pack.");
+  }
+}
+
+export async function regenerateInterviewPackAction(
+  _previousState: RegenerateInterviewPackActionState,
+  formData: FormData,
+): Promise<RegenerateInterviewPackActionState> {
+  const parsed = regenerateInterviewPackSchema.safeParse({
+    packId: normalizeTextInput(formData.get("packId")),
+    additionalPrompt: normalizeTextInput(formData.get("additionalPrompt")),
+  });
+
+  if (!parsed.success) {
+    const additionalPromptError = parsed.error.issues.find((issue) => issue.path[0] === "additionalPrompt")?.message;
+    return returnRegeneratePackError("Add guidance before regenerating this pack.", {
+      additionalPrompt: additionalPromptError,
+    });
+  }
+
+  const { user } = await getAuthedClient();
+
+  try {
+    const existingPack = await getInterviewPackForUserById(parsed.data.packId, user.id);
+
+    if (!existingPack) {
+      return returnRegeneratePackError("Interview pack not found.");
+    }
+
+    const resolvedCvText = existingPack.cv_text?.trim() ?? "";
+
+    if (!resolvedCvText) {
+      return returnRegeneratePackError("This pack has no saved CV text. Create a new pack from your CV first.");
+    }
+
+    const aiResponse = await generateInterviewPack({
+      input: {
+        title: existingPack.title,
+        cvMode: existingPack.cv_source,
+        cvText: resolvedCvText,
+        cvFileName: existingPack.cv_file_name ?? undefined,
+        savedCvText: resolvedCvText,
+        savedCvFileName: existingPack.cv_file_name ?? undefined,
+        jobUrl: existingPack.job_url ?? undefined,
+        jobDescription: existingPack.job_description ?? undefined,
+        screenshotNames: existingPack.screenshot_names ?? [],
+        additionalInstructions: parsed.data.additionalPrompt,
+      },
+      cvText: resolvedCvText,
+      screenshotDataUrls: [],
+    });
+
+    const updatedPack = await updateInterviewPackForUser(existingPack.id, user.id, {
+      additionalInstructions: parsed.data.additionalPrompt,
+      aiResponse,
+    });
+
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/packs");
+
+    return {
+      status: "success",
+      message: "Interview Pack regenerated with your new prompt.",
+      pack: updatedPack,
+    };
+  } catch (error) {
+    return returnRegeneratePackError(error instanceof Error ? error.message : "Unable to regenerate this interview pack.");
+  }
 }
 
 function buildCompanyNameFromUrl(url?: string | null) {
