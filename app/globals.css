@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
@@ -32,7 +34,7 @@ body {
   margin: 0;
 }
 
-a {
+a:not([class]) {
   color: inherit;
   text-decoration: none;
 }
@@ -49,10 +51,6 @@ html.dark .bg-slate-50 {
   background-color: #0f172a !important;
 }
 
-html.dark .bg-slate-950 {
-  background-color: #e2e8f0 !important;
-}
-
 html.dark .text-slate-950,
 html.dark .text-slate-900 {
   color: #e2e8f0 !important;
@@ -63,11 +61,6 @@ html.dark .text-slate-600,
 html.dark .text-slate-500,
 html.dark .text-slate-400 {
   color: #94a3b8 !important;
-}
-
-html.dark .bg-slate-950.text-white,
-html.dark .bg-slate-950 .text-white {
-  color: #020617 !important;
 }
 
 html.dark .border-white\/80,
@@ -82,6 +75,20 @@ html.dark .shadow-\[0_18px_50px_rgba\(15\,23\,42\,0\.08\)\],
 html.dark .shadow-\[0_24px_70px_rgba\(15\,23\,42\,0\.10\)\],
 html.dark .shadow-\[0_30px_80px_rgba\(15\,23\,42\,0\.14\)\] {
   box-shadow: 0 16px 48px rgba(2, 6, 23, 0.45) !important;
+}
+
+.landing-register-button {
+  background-color: #0f172a;
+  color: #fff;
+}
+
+html.dark .landing-register-button {
+  background-color: #e2e8f0;
+  color: #0f172a;
+}
+
+html.dark .landing-register-button:hover {
+  background-color: #fff;
 }
 
 html.dark main {

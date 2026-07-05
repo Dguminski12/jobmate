@@ -3,24 +3,24 @@ import ThemeToggle from "@/components/theme/theme-toggle";
 
 export default function Home() {
   return (
-    <main className="relative isolate overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,_rgba(45,212,191,0.22),_transparent_32%),radial-gradient(circle_at_top_right,_rgba(59,130,246,0.18),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef5ff_42%,_#f7fbff_100%)]" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[32rem] bg-[linear-gradient(135deg,_rgba(15,23,42,0.06),_rgba(15,23,42,0))]" />
+    <main className="relative isolate min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(45,212,191,0.22),_transparent_32%),radial-gradient(circle_at_top_right,_rgba(59,130,246,0.18),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef5ff_42%,_#f7fbff_100%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(15,23,42,0.6),_transparent_32%),radial-gradient(circle_at_top_right,_rgba(30,41,59,0.42),_transparent_30%),linear-gradient(180deg,_#020617_0%,_#01030a_42%,_#01030a_100%)]">
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,_rgba(45,212,191,0.22),_transparent_32%),radial-gradient(circle_at_top_right,_rgba(59,130,246,0.18),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef5ff_42%,_#f7fbff_100%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(15,23,42,0.6),_transparent_32%),radial-gradient(circle_at_top_right,_rgba(30,41,59,0.42),_transparent_30%),linear-gradient(180deg,_#020617_0%,_#01030a_42%,_#01030a_100%)]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[32rem] bg-[linear-gradient(135deg,_rgba(15,23,42,0.06),_rgba(15,23,42,0))] dark:bg-[linear-gradient(135deg,_rgba(15,23,42,0.34),_rgba(15,23,42,0))]" />
 
-      <header className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-6 lg:px-10">
+      <header className="sticky top-0 z-50 mx-auto flex w-full max-w-7xl items-center justify-between rounded-[2rem] border border-slate-200/80 bg-white/90 px-6 py-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl lg:px-10 dark:border-slate-800 dark:bg-slate-950/85 dark:shadow-[0_18px_50px_rgba(2,6,23,0.4)]">
         <Link href="/" className="group inline-flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/70 bg-slate-950 text-sm font-semibold text-white shadow-[0_18px_50px_rgba(15,23,42,0.18)]">
+          <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-slate-950 text-sm font-semibold text-white shadow-[0_18px_50px_rgba(15,23,42,0.18)] dark:border-slate-700 dark:bg-slate-900">
             JM
           </span>
           <span className="flex flex-col leading-tight">
-            <span className="text-sm font-semibold tracking-[0.28em] text-slate-500 uppercase">
+            <span className="text-sm font-semibold tracking-[0.28em] text-slate-500 uppercase dark:text-slate-400">
               JobMate
             </span>
-            <span className="text-xs text-slate-500">AI Job & Interview Coach</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">AI Job & Interview Coach</span>
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-8 text-sm text-slate-600 md:flex">
+        <nav className="hidden items-center gap-8 text-sm text-slate-600 md:flex dark:text-slate-400">
           <a className="transition hover:text-slate-950" href="#features">
             Features
           </a>
@@ -32,17 +32,17 @@ export default function Home() {
           </a>
         </nav>
 
-        <div className="flex items-center gap-3 text-sm font-medium">
+        <div className="relative z-50 flex items-center gap-3 text-sm font-medium">
           <ThemeToggle />
           <Link
             href="/login"
-            className="rounded-full border border-slate-300 bg-white/80 px-4 py-2 text-slate-700 shadow-sm backdrop-blur transition hover:border-slate-400 hover:text-slate-950"
+            className="rounded-full border border-slate-300 bg-white/90 px-4 py-2 text-slate-700 shadow-sm backdrop-blur transition hover:border-slate-400 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:text-white"
           >
             Log in
           </Link>
           <Link
             href="/register"
-            className="rounded-full bg-slate-950 px-4 py-2 text-white shadow-[0_18px_50px_rgba(15,23,42,0.22)] transition hover:bg-slate-800"
+            className="landing-register-button rounded-full bg-slate-950 px-4 py-2 text-white shadow-[0_18px_50px_rgba(15,23,42,0.22)] transition hover:bg-slate-800"
           >
             Register
           </Link>
