@@ -155,7 +155,7 @@ export default function JobsDashboard({ jobs, filters }: JobsDashboardProps) {
               Apply
             </button>
             <Link
-              href="/dashboard"
+              href="/dashboard/tracker"
               className="flex-1 rounded-full border border-slate-200 px-5 py-3 text-center text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-950"
             >
               Reset
