@@ -3,10 +3,12 @@
 import { useActionState, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import {
   addInterviewPackToTrackerAction,
+  createBillingCheckoutAction,
   deleteInterviewPackAction,
   generateInterviewPackAction,
   regenerateInterviewPackAction,
 } from "@/app/dashboard/actions";
+import { PAYWALL_PRICE_LABEL, type BillingAccessSummary, type BillingCheckoutActionState } from "@/lib/billing/types";
 import type {
   AddPackToTrackerActionState,
   CVSource,
@@ -37,6 +39,11 @@ const deletePackInitialState: DeleteInterviewPackActionState = {
   message: "",
 };
 
+const billingCheckoutInitialState: BillingCheckoutActionState = {
+  status: "idle",
+  message: "",
+};
+
 const cvDraftStorageKey = "jobmate-cv-draft";
 
 const stepLabels = ["Upload CV", "Add Job Details", "Additional Instructions", "Generate Interview Pack"];
@@ -44,6 +51,9 @@ const stepLabels = ["Upload CV", "Add Job Details", "Additional Instructions", "
 type InterviewPackWorkspaceProps = {
   packs: InterviewPackRecord[];
   packsTableMissing: boolean;
+  billingAccessSummary: BillingAccessSummary;
+  billingStatusMessage: string;
+  billingTableMissing: boolean;
 };
 
 type PersistedCvDraft = {
@@ -51,6 +61,9 @@ type PersistedCvDraft = {
   fileName: string;
   text: string;
 };
+
+let cachedCvDraftRaw: string | null = null;
+let cachedCvDraftValue: PersistedCvDraft | null = null;
 
 function toStringList(value: unknown) {
   if (!Array.isArray(value)) {
@@ -117,6 +130,26 @@ function formatPackCreatedAt(createdAt: string) {
   }).format(new Date(createdAt));
 }
 
+function formatPaidAccessUntil(value: string) {
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
+function getBillingStatusBannerClassName(message: string) {
+  if (message.toLowerCase().includes("completed")) {
+    return "mt-4 rounded-2xl border border-emerald-300 bg-emerald-100 px-4 py-3 text-sm font-semibold text-emerald-950 shadow-sm";
+  }
+
+  if (message.toLowerCase().includes("cancelled")) {
+    return "mt-4 rounded-2xl border border-amber-300 bg-amber-100 px-4 py-3 text-sm font-semibold text-amber-950 shadow-sm";
+  }
+
+  return "mt-4 rounded-2xl border border-cyan-300 bg-white/80 px-4 py-3 text-sm font-semibold text-cyan-950 shadow-sm";
+}
+
 function getPersistedCvDraft(): PersistedCvDraft | null {
   if (typeof window === "undefined") {
     return null;
@@ -125,20 +158,33 @@ function getPersistedCvDraft(): PersistedCvDraft | null {
   try {
     const rawDraft = window.localStorage.getItem(cvDraftStorageKey);
     if (!rawDraft) {
+      cachedCvDraftRaw = null;
+      cachedCvDraftValue = null;
       return null;
+    }
+
+    if (rawDraft === cachedCvDraftRaw) {
+      return cachedCvDraftValue;
     }
 
     const parsedDraft = JSON.parse(rawDraft) as Partial<PersistedCvDraft>;
     if ((parsedDraft.mode !== "file" && parsedDraft.mode !== "text") || typeof parsedDraft.text !== "string") {
+      cachedCvDraftRaw = rawDraft;
+      cachedCvDraftValue = null;
       return null;
     }
 
-    return {
+    cachedCvDraftRaw = rawDraft;
+    cachedCvDraftValue = {
       mode: parsedDraft.mode,
       fileName: typeof parsedDraft.fileName === "string" ? parsedDraft.fileName : "",
       text: parsedDraft.text,
     };
+
+    return cachedCvDraftValue;
   } catch {
+    cachedCvDraftRaw = null;
+    cachedCvDraftValue = null;
     return null;
   }
 }
@@ -200,6 +246,7 @@ function SectionCard({ title, children }: { title: string; children: React.React
 
 function InterviewPackView({
   pack,
+  billingBlocked,
   regenerateAction,
   regenerateState,
   isRegenerating,
@@ -208,6 +255,7 @@ function InterviewPackView({
   isDeletingPack,
 }: {
   pack: InterviewPackRecord;
+  billingBlocked: boolean;
   regenerateAction: (formData: FormData) => void;
   regenerateState: RegenerateInterviewPackActionState;
   isRegenerating: boolean;
@@ -266,13 +314,19 @@ function InterviewPackView({
           <div className="mt-3 flex justify-end">
             <button
               type="submit"
-              disabled={isRegenerating}
+              disabled={isRegenerating || billingBlocked}
               className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isRegenerating ? "Regenerating..." : "Regenerate pack"}
             </button>
           </div>
         </form>
+
+        {billingBlocked ? (
+          <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            Free usage is exhausted. Unlock 31 days for {PAYWALL_PRICE_LABEL} to keep regenerating packs.
+          </p>
+        ) : null}
 
         {regenerateState.status === "success" ? (
           <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
@@ -407,8 +461,18 @@ function InterviewPackView({
   );
 }
 
-export default function InterviewPackWorkspace({ packs, packsTableMissing }: InterviewPackWorkspaceProps) {
+export default function InterviewPackWorkspace({
+  packs,
+  packsTableMissing,
+  billingAccessSummary,
+  billingStatusMessage,
+  billingTableMissing,
+}: InterviewPackWorkspaceProps) {
   const [state, formAction, isPending] = useActionState(generateInterviewPackAction, initialState);
+  const [checkoutState, checkoutAction, isStartingCheckout] = useActionState(
+    createBillingCheckoutAction,
+    billingCheckoutInitialState,
+  );
   const [regenerateState, regenerateAction, isRegenerating] = useActionState(
     regenerateInterviewPackAction,
     regeneratePackInitialState,
@@ -443,6 +507,7 @@ export default function InterviewPackWorkspace({ packs, packsTableMissing }: Int
   const submittedCvMode = cvMode === "file" && !cvFileName && activeCvDraft ? activeCvDraft.mode : cvMode;
   const submittedCvText = cvText ?? activeCvDraft?.text ?? "";
   const submittedCvFileName = cvFileName ?? activeCvDraft?.fileName ?? "";
+  const billingBlocked = !billingAccessSummary.hasActiveAccess && billingAccessSummary.freeGenerationsRemaining === 0;
 
   useEffect(() => {
     if (state.status !== "success" || !state.pack) {
@@ -536,9 +601,55 @@ export default function InterviewPackWorkspace({ packs, packsTableMissing }: Int
           <StepIndicator currentStep={currentStep} />
         </div>
 
+        <div className="mt-6 rounded-[1.75rem] border border-cyan-200 bg-cyan-50/80 p-5 shadow-[0_18px_50px_rgba(6,78,99,0.08)] backdrop-blur-xl md:p-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-xs font-semibold tracking-[0.18em] text-cyan-700 uppercase">Access</p>
+              <h3 className="mt-2 text-lg font-semibold tracking-tight text-cyan-950">
+                {billingAccessSummary.hasActiveAccess
+                  ? `Unlimited access active until ${formatPaidAccessUntil(billingAccessSummary.paidAccessUntil ?? new Date().toISOString())}`
+                  : `${billingAccessSummary.freeGenerationsRemaining} of 3 free generations left`}
+              </h3>
+              <p className="mt-2 max-w-2xl text-sm leading-7 text-cyan-950/80">
+                Generations and regenerations both count toward the free allowance. After that, unlock 31 days of unlimited use for {PAYWALL_PRICE_LABEL}.
+              </p>
+            </div>
+
+            {!billingAccessSummary.hasActiveAccess && !billingTableMissing ? (
+              <form action={checkoutAction}>
+                <button
+                  type="submit"
+                  disabled={isStartingCheckout}
+                  className="rounded-full bg-cyan-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-cyan-900 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isStartingCheckout ? "Redirecting..." : `Unlock 31 Days for ${PAYWALL_PRICE_LABEL}`}
+                </button>
+              </form>
+            ) : null}
+          </div>
+
+          {billingStatusMessage ? (
+            <p className={getBillingStatusBannerClassName(billingStatusMessage)}>
+              {billingStatusMessage}
+            </p>
+          ) : null}
+
+          {checkoutState.status === "error" ? (
+            <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+              {checkoutState.message}
+            </p>
+          ) : null}
+        </div>
+
         {packsTableMissing ? (
           <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
             Interview Packs table is missing. Run the migration file for interview packs, then refresh the page.
+          </div>
+        ) : null}
+
+        {billingTableMissing ? (
+          <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            Billing tables are missing. Run the billing migration before testing the paywall.
           </div>
         ) : null}
 
@@ -731,10 +842,10 @@ export default function InterviewPackWorkspace({ packs, packsTableMissing }: Int
 
             <button
               type="submit"
-              disabled={isPending || packsTableMissing || currentStep !== 4}
+              disabled={isPending || packsTableMissing || billingTableMissing || billingBlocked || currentStep !== 4}
               className="rounded-full bg-slate-950 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isPending ? "Generating..." : "Generate Interview Pack"}
+              {isPending ? "Generating..." : billingBlocked ? "Unlock Required" : "Generate Interview Pack"}
             </button>
           </div>
         </form>
@@ -791,6 +902,7 @@ export default function InterviewPackWorkspace({ packs, packsTableMissing }: Int
             <InterviewPackView
               key={selectedPack.id}
               pack={selectedPack}
+              billingBlocked={billingBlocked || billingTableMissing}
               regenerateAction={regenerateAction}
               regenerateState={regenerateState}
               isRegenerating={isRegenerating}

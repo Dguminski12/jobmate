@@ -1,6 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
+import { consumeGenerationAccess, getBillingAccessSummary } from "@/lib/billing/server";
+import { getAppUrl, getPaywallPriceData, getStripeClient } from "@/lib/billing/stripe";
+import type { BillingCheckoutActionState } from "@/lib/billing/types";
 import { createJobForUser, deleteJobForUser, getAuthedClient, updateJobForUser } from "@/lib/jobs/server";
 import { createJobSchema, deleteJobSchema, updateJobSchema } from "@/lib/jobs/validation";
 import type { JobActionState, JobDeleteActionState } from "@/lib/jobs/types";
@@ -28,7 +34,7 @@ function collectFormData(formData: FormData) {
   return Object.fromEntries(formData.entries());
 }
 
-function mapFieldErrors(error: { issues: Array<{ path: Array<string | number>; message: string }> }) {
+function mapFieldErrors(error: { issues: Array<{ path: PropertyKey[]; message: string }> }) {
   const fieldErrors: NonNullable<JobActionState["fieldErrors"]> = {};
 
   for (const issue of error.issues) {
@@ -59,6 +65,35 @@ function returnGenerateError(
     message,
     fieldErrors,
   };
+}
+
+function returnBillingCheckoutError(message: string): BillingCheckoutActionState {
+  return {
+    status: "error",
+    message,
+  };
+}
+
+function getPaywallBlockedMessage() {
+  return "Your 3 free generations are used up. Unlock 31 days of unlimited generations and regenerations for £9.99.";
+}
+
+async function resolveRequestAppUrl() {
+  const headerStore = await headers();
+  const origin = headerStore.get("origin");
+
+  if (origin) {
+    return origin.replace(/\/$/, "");
+  }
+
+  const host = headerStore.get("x-forwarded-host") ?? headerStore.get("host");
+
+  if (host) {
+    const protocol = headerStore.get("x-forwarded-proto") ?? (host.includes("localhost") ? "http" : "https");
+    return `${protocol}://${host}`;
+  }
+
+  return getAppUrl();
 }
 
 function normalizeTextInput(value: FormDataEntryValue | null) {
@@ -217,6 +252,12 @@ export async function generateInterviewPackAction(
       }
     }
 
+    const generationAccess = await consumeGenerationAccess(user.id);
+
+    if (!generationAccess.allowed) {
+      return returnGenerateError(getPaywallBlockedMessage());
+    }
+
     const screenshotDataUrls = await toImageDataUrls(screenshotFiles);
 
     const aiResponse = await generateInterviewPack({
@@ -244,6 +285,7 @@ export async function generateInterviewPackAction(
     );
 
     revalidatePath("/dashboard");
+    revalidatePath("/dashboard/packs");
 
     return {
       status: "success",
@@ -340,6 +382,12 @@ export async function regenerateInterviewPackAction(
       return returnRegeneratePackError("This pack has no saved CV text. Create a new pack from your CV first.");
     }
 
+    const generationAccess = await consumeGenerationAccess(user.id);
+
+    if (!generationAccess.allowed) {
+      return returnRegeneratePackError(getPaywallBlockedMessage());
+    }
+
     const aiResponse = await generateInterviewPack({
       input: {
         title: existingPack.title,
@@ -372,6 +420,58 @@ export async function regenerateInterviewPackAction(
     };
   } catch (error) {
     return returnRegeneratePackError(error instanceof Error ? error.message : "Unable to regenerate this interview pack.");
+  }
+}
+
+export async function createBillingCheckoutAction(
+  _previousState: BillingCheckoutActionState,
+): Promise<BillingCheckoutActionState> {
+  void _previousState;
+  const { user } = await getAuthedClient();
+
+  try {
+    const billingAccess = await getBillingAccessSummary(user.id);
+
+    if (billingAccess.hasActiveAccess) {
+      return returnBillingCheckoutError("Unlimited access is already active on your account.");
+    }
+
+    const stripe = getStripeClient();
+    const appUrl = await resolveRequestAppUrl();
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      success_url: `${appUrl}/dashboard/packs?billing=success`,
+      cancel_url: `${appUrl}/dashboard/packs?billing=cancelled`,
+      client_reference_id: user.id,
+      customer_email: user.email ?? undefined,
+      line_items: [
+        {
+          quantity: 1,
+          price_data: getPaywallPriceData(),
+        },
+      ],
+      metadata: {
+        userId: user.id,
+      },
+      payment_intent_data: {
+        metadata: {
+          userId: user.id,
+        },
+      },
+      allow_promotion_codes: false,
+    });
+
+    if (!session.url) {
+      return returnBillingCheckoutError("Stripe checkout did not return a payment URL.");
+    }
+
+    redirect(session.url);
+  } catch (error) {
+    if (isRedirectError(error)) {
+      throw error;
+    }
+
+    return returnBillingCheckoutError(error instanceof Error ? error.message : "Unable to start checkout.");
   }
 }
 

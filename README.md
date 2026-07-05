@@ -7,9 +7,14 @@ Add these values in `.env.local`:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
 OPENAI_API_KEY=...
 # Optional, defaults to gpt-4.1-mini
 OPENAI_MODEL=gpt-4.1-mini
+STRIPE_SECRET_KEY=...
+STRIPE_WEBHOOK_SECRET=...
+# Optional in local dev, defaults to http://localhost:3000
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
 If `OPENAI_API_KEY` is missing, Interview Pack generation falls back to a local mock response.
@@ -20,12 +25,30 @@ For production, do not commit secrets into the repository. Add the same variable
 
 - `NEXT_PUBLIC_SUPABASE_URL`: your Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: your Supabase anon/public key
+- `SUPABASE_SERVICE_ROLE_KEY`: required for Stripe webhook writes into Supabase
 - `OPENAI_API_KEY`: optional, enables live Interview Pack generation
 - `OPENAI_MODEL`: optional, defaults to `gpt-4.1-mini`
+- `STRIPE_SECRET_KEY`: required for checkout session creation
+- `STRIPE_WEBHOOK_SECRET`: required for verifying Stripe webhook callbacks
+- `NEXT_PUBLIC_APP_URL`: recommended for absolute checkout return URLs
 
 On Vercel, set them in your project settings under Environment Variables, then redeploy.
 
 If you're using Supabase auth, also add your deployed site URL to the allowed redirect and site URL settings in the Supabase dashboard.
+
+## Paywall Setup
+
+- Run the billing migration in [supabase/migrations/20260705_create_user_entitlements.sql](supabase/migrations/20260705_create_user_entitlements.sql).
+- The paywall allows 3 free generations per user, and regenerations count toward the same limit.
+- After the free limit is reached, users can buy 31 days of unlimited access for £9.99 through Stripe Checkout.
+- Configure a Stripe webhook endpoint pointing to `/api/stripe/webhook`.
+- In local development, run Stripe CLI forwarding so webhook events reach your app:
+
+```bash
+stripe listen --forward-to localhost:3000/api/stripe/webhook
+```
+
+- Copy the signing secret from Stripe CLI or the Stripe dashboard into `STRIPE_WEBHOOK_SECRET`.
 
 ## Interview Pack Generation
 
