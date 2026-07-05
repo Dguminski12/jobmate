@@ -19,14 +19,14 @@ const navItems = [
 
 function itemClasses(active: boolean) {
   if (active) {
-    return "border-slate-900 bg-slate-900 text-white";
+    return "border-slate-900 bg-slate-900 text-white dark:border-cyan-300/70 dark:bg-cyan-300/20 dark:text-cyan-100 dark:shadow-[0_10px_30px_rgba(34,211,238,0.25)]";
   }
 
-  return "border-slate-200 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-950";
+  return "border-slate-200 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-900/55 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:text-slate-100";
 }
 
 function itemDescriptionClasses(active: boolean) {
-  return active ? "text-slate-300" : "text-slate-500";
+  return active ? "text-slate-300 dark:text-cyan-100/85" : "text-slate-500 dark:text-slate-400";
 }
 
 export default function DashboardNavigation() {
@@ -106,7 +106,7 @@ export default function DashboardNavigation() {
                       onClick={() => setMobileMenuOpen(false)}
                       className={`block rounded-2xl border px-4 py-3 shadow-sm transition ${
                         active
-                          ? "border-slate-900 bg-slate-900 text-white dark:border-cyan-400/50 dark:bg-slate-950"
+                          ? "border-slate-900 bg-slate-900 text-white dark:border-cyan-300/75 dark:bg-cyan-300/20 dark:text-cyan-100 dark:shadow-[0_10px_30px_rgba(34,211,238,0.28)]"
                           : "border-slate-200/90 bg-white/75 text-slate-700 hover:border-slate-400 hover:bg-white dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-200 dark:hover:border-cyan-400/45 dark:hover:bg-slate-900"
                       }`}
                     >
