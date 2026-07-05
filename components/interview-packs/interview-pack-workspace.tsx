@@ -204,8 +204,7 @@ export default function InterviewPackWorkspace({ packs, packsTableMissing }: Int
         <form action={formAction} className="mt-6 space-y-6" noValidate>
           <input type="hidden" name="cvMode" value={cvMode} />
 
-          {currentStep === 1 ? (
-            <div className="space-y-4">
+          <div className={currentStep === 1 ? "space-y-4" : "hidden space-y-4"}>
               <label className="block">
                 <span className="mb-2 block text-sm font-medium text-slate-700">Pack title</span>
                 <input
@@ -235,7 +234,7 @@ export default function InterviewPackWorkspace({ packs, packsTableMissing }: Int
                   }`}
                 >
                   <p className="text-sm font-semibold">Paste CV Text</p>
-                  <p className="mt-1 text-xs opacity-80">Paste raw CV content for richer mock generation.</p>
+                  <p className="mt-1 text-xs opacity-80">Paste raw CV content for direct AI analysis.</p>
                 </button>
               </div>
 
@@ -267,11 +266,9 @@ export default function InterviewPackWorkspace({ packs, packsTableMissing }: Int
                   {state.fieldErrors?.cvText ? <p className="mt-2 text-sm text-rose-600">{state.fieldErrors.cvText}</p> : null}
                 </label>
               )}
-            </div>
-          ) : null}
+          </div>
 
-          {currentStep === 2 ? (
-            <div className="space-y-4">
+          <div className={currentStep === 2 ? "space-y-4" : "hidden space-y-4"}>
               <label className="block">
                 <span className="mb-2 block text-sm font-medium text-slate-700">Job URL (optional)</span>
                 <input
@@ -308,16 +305,14 @@ export default function InterviewPackWorkspace({ packs, packsTableMissing }: Int
                 {screenshotNames.length > 0 ? (
                   <p className="mt-2 text-xs text-slate-500">{screenshotNames.length} screenshot(s): {screenshotNames.join(", ")}</p>
                 ) : (
-                  <p className="mt-2 text-xs text-slate-500">UI is ready for OCR processing integration in a later step.</p>
+                  <p className="mt-2 text-xs text-slate-500">Screenshots are sent for AI-assisted OCR and context extraction.</p>
                 )}
               </label>
 
               {state.fieldErrors?.jobDetails ? <p className="text-sm text-rose-600">{state.fieldErrors.jobDetails}</p> : null}
-            </div>
-          ) : null}
+          </div>
 
-          {currentStep === 3 ? (
-            <div className="space-y-4">
+          <div className={currentStep === 3 ? "space-y-4" : "hidden space-y-4"}>
               <label className="block">
                 <span className="mb-2 block text-sm font-medium text-slate-700">Additional AI instructions (optional)</span>
                 <textarea
@@ -327,21 +322,40 @@ export default function InterviewPackWorkspace({ packs, packsTableMissing }: Int
                   className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
                 />
               </label>
-            </div>
-          ) : null}
+          </div>
 
-          {currentStep === 4 ? (
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+          <div className={currentStep === 4 ? "rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700" : "hidden rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700"}>
               <p className="font-semibold text-slate-950">Ready to generate</p>
               <p className="mt-2">
-                Submitting will create a mocked Interview Pack with cover letter, CV suggestions, ATS keyword analysis, company research, role summary, interview questions, STAR examples, technical topics, salary insights, interviewer questions, and a checklist.
+                Submitting will create an Interview Pack with cover letter, CV suggestions, ATS keyword analysis, company research, role summary, interview questions, STAR examples, technical topics, salary insights, interviewer questions, and a checklist.
               </p>
-              <p className="mt-3 text-xs text-slate-500">The generation logic is isolated behind a single service and can be swapped with OpenAI later.</p>
-            </div>
-          ) : null}
+              <p className="mt-3 text-xs text-slate-500">Generation runs through a single AI service boundary with fallback handling.</p>
+          </div>
 
           {state.status === "error" ? (
-            <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{state.message}</p>
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              <p>{state.message}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {state.fieldErrors?.title || state.fieldErrors?.cvText || state.fieldErrors?.cvFile ? (
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(1)}
+                    className="rounded-full border border-rose-300 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:border-rose-500"
+                  >
+                    Go to Step 1
+                  </button>
+                ) : null}
+                {state.fieldErrors?.jobDetails ? (
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(2)}
+                    className="rounded-full border border-rose-300 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:border-rose-500"
+                  >
+                    Go to Step 2
+                  </button>
+                ) : null}
+              </div>
+            </div>
           ) : null}
 
           {state.status === "success" ? (
