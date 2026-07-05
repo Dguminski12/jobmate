@@ -14,6 +14,19 @@ OPENAI_MODEL=gpt-4.1-mini
 
 If `OPENAI_API_KEY` is missing, Interview Pack generation falls back to a local mock response.
 
+## Deployment Variables
+
+For production, do not commit secrets into the repository. Add the same variables in your hosting provider's environment settings instead:
+
+- `NEXT_PUBLIC_SUPABASE_URL`: your Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: your Supabase anon/public key
+- `OPENAI_API_KEY`: optional, enables live Interview Pack generation
+- `OPENAI_MODEL`: optional, defaults to `gpt-4.1-mini`
+
+On Vercel, set them in your project settings under Environment Variables, then redeploy.
+
+If you're using Supabase auth, also add your deployed site URL to the allowed redirect and site URL settings in the Supabase dashboard.
+
 ## Interview Pack Generation
 
 - CV file parsing is implemented for PDF and DOCX uploads.
@@ -54,3 +67,11 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+### Quick checklist
+
+1. Push your code to GitHub.
+2. Import the repo into Vercel.
+3. Set the environment variables listed above in Vercel.
+4. Add your production domain to Supabase auth settings.
+5. Redeploy and share the URL with testers.
