@@ -21,6 +21,15 @@ function copyCookies(source: NextResponse, target: NextResponse) {
 }
 
 export default async function proxy(request: NextRequest) {
+  const { pathname, searchParams } = request.nextUrl;
+  const hasSensitiveLoginParams =
+    pathname === "/login" && (searchParams.has("email") || searchParams.has("password"));
+
+  if (hasSensitiveLoginParams) {
+    const sanitizedUrl = new URL("/login", request.url);
+    return NextResponse.redirect(sanitizedUrl, { status: 302 });
+  }
+
   const { supabaseUrl, supabaseAnonKey } = getSupabaseConfig();
   const response = NextResponse.next({ request });
 
@@ -42,7 +51,6 @@ export default async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { pathname } = request.nextUrl;
   const isDashboard = pathname.startsWith("/dashboard");
   const isHomePage = pathname === "/";
 
