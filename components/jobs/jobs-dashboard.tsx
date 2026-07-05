@@ -53,6 +53,22 @@ function statusTone(status: JobRecord["status"]) {
 
 export default function JobsDashboard({ jobs, filters }: JobsDashboardProps) {
   const [modalState, setModalState] = useState<ModalState>(null);
+  const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
+  const [expandedNextActions, setExpandedNextActions] = useState<Record<string, boolean>>({});
+
+  function toggleNotes(jobId: string) {
+    setExpandedNotes((previous) => ({
+      ...previous,
+      [jobId]: !previous[jobId],
+    }));
+  }
+
+  function toggleNextAction(jobId: string) {
+    setExpandedNextActions((previous) => ({
+      ...previous,
+      [jobId]: !previous[jobId],
+    }));
+  }
 
   const counts = useMemo(() => {
     const next = {
@@ -233,8 +249,48 @@ export default function JobsDashboard({ jobs, filters }: JobsDashboardProps) {
                         "—"
                       )}
                     </td>
-                    <td className="max-w-[280px] px-4 py-4 align-top">{job.notes ?? "—"}</td>
-                    <td className="max-w-[240px] px-4 py-4 align-top">{job.next_action ?? "—"}</td>
+                    <td className="max-w-[280px] px-4 py-4 align-top">
+                      {job.notes ? (
+                        <div>
+                          <p className="whitespace-pre-wrap break-words">
+                            {expandedNotes[job.id] ? job.notes : job.notes.slice(0, 140)}
+                            {!expandedNotes[job.id] && job.notes.length > 140 ? "..." : ""}
+                          </p>
+                          {job.notes.length > 140 ? (
+                            <button
+                              type="button"
+                              onClick={() => toggleNotes(job.id)}
+                              className="mt-2 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
+                            >
+                              {expandedNotes[job.id] ? "Collapse" : "Expand"}
+                            </button>
+                          ) : null}
+                        </div>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="max-w-[240px] px-4 py-4 align-top">
+                      {job.next_action ? (
+                        <div>
+                          <p className="whitespace-pre-wrap break-words">
+                            {expandedNextActions[job.id] ? job.next_action : job.next_action.slice(0, 120)}
+                            {!expandedNextActions[job.id] && job.next_action.length > 120 ? "..." : ""}
+                          </p>
+                          {job.next_action.length > 120 ? (
+                            <button
+                              type="button"
+                              onClick={() => toggleNextAction(job.id)}
+                              className="mt-2 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
+                            >
+                              {expandedNextActions[job.id] ? "Collapse" : "Expand"}
+                            </button>
+                          ) : null}
+                        </div>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
                     <td className="px-4 py-4 whitespace-nowrap">{formatDateTime(job.created_at)}</td>
                     <td className="px-4 py-4 whitespace-nowrap">{formatDateTime(job.updated_at)}</td>
                     <td className="px-4 py-4 whitespace-nowrap">
