@@ -150,6 +150,8 @@ export async function generateInterviewPackAction(
     cvMode,
     cvText: normalizeTextInput(formData.get("cvText")),
     cvFileName: cvFile instanceof File && cvFile.size > 0 ? cvFile.name : "",
+    savedCvText: normalizeTextInput(formData.get("savedCvText")),
+    savedCvFileName: normalizeTextInput(formData.get("savedCvFileName")),
     jobUrl: normalizeTextInput(formData.get("jobUrl")),
     jobDescription: normalizeTextInput(formData.get("jobDescription")),
     screenshotNames: normalizeScreenshotNames(formData),
@@ -186,15 +188,19 @@ export async function generateInterviewPackAction(
 
   try {
     let resolvedCvText = parsed.data.cvText ?? "";
+    let resolvedCvFileName = parsed.data.cvFileName ?? parsed.data.savedCvFileName ?? "";
 
     if (parsed.data.cvMode === "file") {
-      if (!(cvFile instanceof File) || cvFile.size <= 0) {
+      if (cvFile instanceof File && cvFile.size > 0) {
+        resolvedCvText = await extractCvTextFromFile(cvFile);
+        resolvedCvFileName = cvFile.name;
+      } else if (parsed.data.savedCvText) {
+        resolvedCvText = parsed.data.savedCvText;
+      } else {
         return returnGenerateError("Upload a CV file before generating.", {
           cvFile: "Upload a CV file before generating.",
         });
       }
-
-      resolvedCvText = await extractCvTextFromFile(cvFile);
     }
 
     const screenshotDataUrls = await toImageDataUrls(screenshotFiles);
@@ -212,7 +218,7 @@ export async function generateInterviewPackAction(
       {
         title: parsed.data.title,
         cvSource: parsed.data.cvMode,
-        cvFileName: parsed.data.cvFileName,
+          cvFileName: resolvedCvFileName,
         cvText: resolvedCvText,
         jobUrl: parsed.data.jobUrl,
         jobDescription: parsed.data.jobDescription,

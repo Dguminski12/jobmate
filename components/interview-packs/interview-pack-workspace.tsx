@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { addInterviewPackToTrackerAction, generateInterviewPackAction } from "@/app/dashboard/actions";
 import type {
   AddPackToTrackerActionState,
+  CVSource,
   GenerateInterviewPackActionState,
   InterviewPackContent,
   InterviewPackRecord,
@@ -19,12 +20,62 @@ const addToTrackerInitialState: AddPackToTrackerActionState = {
   message: "",
 };
 
+const cvDraftStorageKey = "jobmate-cv-draft";
+
 const stepLabels = ["Upload CV", "Add Job Details", "Additional Instructions", "Generate Interview Pack"];
 
 type InterviewPackWorkspaceProps = {
   packs: InterviewPackRecord[];
   packsTableMissing: boolean;
 };
+
+type PersistedCvDraft = {
+  mode: CVSource;
+  fileName: string;
+  text: string;
+};
+
+function getPersistedCvDraft(): PersistedCvDraft | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const rawDraft = window.localStorage.getItem(cvDraftStorageKey);
+    if (!rawDraft) {
+      return null;
+    }
+
+    const parsedDraft = JSON.parse(rawDraft) as Partial<PersistedCvDraft>;
+    if ((parsedDraft.mode !== "file" && parsedDraft.mode !== "text") || typeof parsedDraft.text !== "string") {
+      return null;
+    }
+
+    return {
+      mode: parsedDraft.mode,
+      fileName: typeof parsedDraft.fileName === "string" ? parsedDraft.fileName : "",
+      text: parsedDraft.text,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function usePersistedCvDraft() {
+  return useSyncExternalStore(
+    (onStoreChange) => {
+      window.addEventListener("storage", onStoreChange);
+      window.addEventListener("jobmate-cv-draft", onStoreChange);
+
+      return () => {
+        window.removeEventListener("storage", onStoreChange);
+        window.removeEventListener("jobmate-cv-draft", onStoreChange);
+      };
+    },
+    getPersistedCvDraft,
+    () => null,
+  );
+}
 
 function StepIndicator({ currentStep }: { currentStep: number }) {
   return (
@@ -189,9 +240,44 @@ export default function InterviewPackWorkspace({ packs, packsTableMissing }: Int
   const [state, formAction, isPending] = useActionState(generateInterviewPackAction, initialState);
   const [currentStep, setCurrentStep] = useState(1);
   const [cvMode, setCvMode] = useState<"file" | "text">("file");
-  const [cvFileName, setCvFileName] = useState("");
+  const [cvFileName, setCvFileName] = useState<string | null>(null);
+  const [cvText, setCvText] = useState<string | null>(null);
   const [screenshotNames, setScreenshotNames] = useState<string[]>([]);
   const [selectedPackId, setSelectedPackId] = useState<string | null>(packs[0]?.id ?? null);
+  const persistedCvDraft = usePersistedCvDraft();
+  const latestSavedCvDraft = state.status === "success" && state.pack
+    ? {
+        mode: state.pack.cv_source,
+        fileName: state.pack.cv_file_name ?? "",
+        text: state.pack.cv_text ?? "",
+      }
+    : packs[0]
+      ? {
+          mode: packs[0].cv_source,
+          fileName: packs[0].cv_file_name ?? "",
+          text: packs[0].cv_text ?? "",
+        }
+      : null;
+  const activeCvDraft = persistedCvDraft ?? latestSavedCvDraft;
+
+  const submittedCvMode = cvMode === "file" && !cvFileName && activeCvDraft ? activeCvDraft.mode : cvMode;
+  const submittedCvText = cvText ?? activeCvDraft?.text ?? "";
+  const submittedCvFileName = cvFileName ?? activeCvDraft?.fileName ?? "";
+
+  useEffect(() => {
+    if (state.status !== "success" || !state.pack) {
+      return;
+    }
+
+    const draft: PersistedCvDraft = {
+      mode: state.pack.cv_source,
+      fileName: state.pack.cv_file_name ?? "",
+      text: state.pack.cv_text ?? "",
+    };
+
+    window.localStorage.setItem(cvDraftStorageKey, JSON.stringify(draft));
+    window.dispatchEvent(new Event("jobmate-cv-draft"));
+  }, [state]);
 
   const allPacks = useMemo(() => {
     if (state.status === "success" && state.pack) {
@@ -246,7 +332,9 @@ export default function InterviewPackWorkspace({ packs, packsTableMissing }: Int
         ) : null}
 
         <form action={formAction} className="mt-6 space-y-6" noValidate>
-          <input type="hidden" name="cvMode" value={cvMode} />
+          <input type="hidden" name="cvMode" value={submittedCvMode} />
+          <input type="hidden" name="savedCvText" value={submittedCvText} />
+          <input type="hidden" name="savedCvFileName" value={submittedCvFileName} />
 
           <div className={currentStep === 1 ? "space-y-4" : "hidden space-y-4"}>
               <label className="block">
@@ -292,10 +380,10 @@ export default function InterviewPackWorkspace({ packs, packsTableMissing }: Int
                     className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 file:mr-3 file:rounded-full file:border-0 file:bg-slate-950 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
                     onChange={(event) => {
                       const file = event.currentTarget.files?.[0];
-                      setCvFileName(file?.name ?? "");
+                      setCvFileName(file?.name ?? null);
                     }}
                   />
-                  {cvFileName ? <p className="mt-2 text-xs text-slate-500">Selected: {cvFileName}</p> : null}
+                  {submittedCvFileName ? <p className="mt-2 text-xs text-slate-500">Selected: {submittedCvFileName}</p> : null}
                   {state.fieldErrors?.cvFile ? <p className="mt-2 text-sm text-rose-600">{state.fieldErrors.cvFile}</p> : null}
                 </label>
               ) : (
@@ -305,6 +393,8 @@ export default function InterviewPackWorkspace({ packs, packsTableMissing }: Int
                     name="cvText"
                     rows={8}
                     placeholder="Paste CV text..."
+                    value={submittedCvText}
+                    onChange={(event) => setCvText(event.currentTarget.value)}
                     className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
                   />
                   {state.fieldErrors?.cvText ? <p className="mt-2 text-sm text-rose-600">{state.fieldErrors.cvText}</p> : null}

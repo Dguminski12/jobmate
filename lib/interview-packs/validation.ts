@@ -8,6 +8,8 @@ export const generateInterviewPackSchema = z
     cvMode: uploadModeSchema,
     cvText: z.string().trim().max(15000).optional(),
     cvFileName: z.string().trim().max(200).optional(),
+    savedCvText: z.string().trim().max(15000).optional(),
+    savedCvFileName: z.string().trim().max(200).optional(),
     jobUrl: z.preprocess(
       (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
       z.string().url("Enter a valid job URL.").optional(),
@@ -17,6 +19,8 @@ export const generateInterviewPackSchema = z
     additionalInstructions: z.string().trim().max(8000).optional(),
   })
   .superRefine((input, context) => {
+    const hasSavedCv = Boolean(input.savedCvText && input.savedCvText.trim().length >= 80);
+
     if (input.cvMode === "text" && (!input.cvText || input.cvText.trim().length < 80)) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
@@ -25,11 +29,11 @@ export const generateInterviewPackSchema = z
       });
     }
 
-    if (input.cvMode === "file" && !input.cvFileName) {
+    if (input.cvMode === "file" && !input.cvFileName && !hasSavedCv) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["cvFileName"],
-        message: "Upload a CV file (.pdf or .docx).",
+        message: "Upload a CV file (.pdf or .docx) or restore a saved CV.",
       });
     }
 
