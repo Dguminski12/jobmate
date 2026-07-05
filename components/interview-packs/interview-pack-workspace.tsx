@@ -35,6 +35,71 @@ type PersistedCvDraft = {
   text: string;
 };
 
+function toStringList(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+}
+
+function normalizeInterviewPackContent(value: unknown): InterviewPackContent {
+  const input = typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+  const atsKeywordAnalysis =
+    typeof input.atsKeywordAnalysis === "object" && input.atsKeywordAnalysis !== null
+      ? (input.atsKeywordAnalysis as Record<string, unknown>)
+      : {};
+
+  const starAnswerExamples = Array.isArray(input.starAnswerExamples)
+    ? input.starAnswerExamples
+        .map((item) => {
+          const example = typeof item === "object" && item !== null ? (item as Record<string, unknown>) : {};
+
+          return {
+            prompt: typeof example.prompt === "string" ? example.prompt : "",
+            situation: typeof example.situation === "string" ? example.situation : "",
+            task: typeof example.task === "string" ? example.task : "",
+            action: typeof example.action === "string" ? example.action : "",
+            result: typeof example.result === "string" ? example.result : "",
+          };
+        })
+        .filter((item) => item.prompt || item.situation || item.task || item.action || item.result)
+    : [];
+
+  return {
+    coverLetter: typeof input.coverLetter === "string" ? input.coverLetter : "No cover letter available.",
+    cvOptimisationSuggestions: toStringList(input.cvOptimisationSuggestions),
+    atsKeywordAnalysis: {
+      summary:
+        typeof atsKeywordAnalysis.summary === "string"
+          ? atsKeywordAnalysis.summary
+          : "ATS keyword analysis is unavailable for this pack.",
+      matchedKeywords: toStringList(atsKeywordAnalysis.matchedKeywords),
+      missingKeywords: toStringList(atsKeywordAnalysis.missingKeywords),
+    },
+    companyResearch: typeof input.companyResearch === "string" ? input.companyResearch : "No company research available.",
+    roleSummary: typeof input.roleSummary === "string" ? input.roleSummary : "No role summary available.",
+    likelyInterviewQuestions: toStringList(input.likelyInterviewQuestions),
+    starAnswerExamples,
+    technicalTopicsToRevise: toStringList(input.technicalTopicsToRevise),
+    salaryInsights: typeof input.salaryInsights === "string" ? input.salaryInsights : "No salary insights available.",
+    questionsToAskInterviewer: toStringList(input.questionsToAskInterviewer),
+    interviewChecklist: toStringList(input.interviewChecklist),
+    promptDrivenExtras: toStringList(input.promptDrivenExtras),
+  };
+}
+
+function formatPackCreatedAt(createdAt: string) {
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC",
+  }).format(new Date(createdAt));
+}
+
 function getPersistedCvDraft(): PersistedCvDraft | null {
   if (typeof window === "undefined") {
     return null;
@@ -121,7 +186,7 @@ function InterviewPackView({ pack }: { pack: InterviewPackRecord }) {
     addInterviewPackToTrackerAction,
     addToTrackerInitialState,
   );
-  const content = pack.ai_response as InterviewPackContent;
+  const content = normalizeInterviewPackContent(pack.ai_response);
 
   return (
     <div className="grid gap-4">
@@ -238,6 +303,7 @@ function InterviewPackView({ pack }: { pack: InterviewPackRecord }) {
 
 export default function InterviewPackWorkspace({ packs, packsTableMissing }: InterviewPackWorkspaceProps) {
   const [state, formAction, isPending] = useActionState(generateInterviewPackAction, initialState);
+  const [isClientHydrated, setIsClientHydrated] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [cvMode, setCvMode] = useState<"file" | "text">("file");
   const [cvFileName, setCvFileName] = useState<string | null>(null);
@@ -258,7 +324,11 @@ export default function InterviewPackWorkspace({ packs, packsTableMissing }: Int
           text: packs[0].cv_text ?? "",
         }
       : null;
-  const activeCvDraft = persistedCvDraft ?? latestSavedCvDraft;
+  const activeCvDraft = isClientHydrated ? persistedCvDraft ?? latestSavedCvDraft : latestSavedCvDraft;
+
+  useEffect(() => {
+    setIsClientHydrated(true);
+  }, []);
 
   const submittedCvMode = cvMode === "file" && !cvFileName && activeCvDraft ? activeCvDraft.mode : cvMode;
   const submittedCvText = cvText ?? activeCvDraft?.text ?? "";
@@ -565,13 +635,9 @@ export default function InterviewPackWorkspace({ packs, packsTableMissing }: Int
                 >
                   <p className="text-sm font-semibold">{pack.title}</p>
                   <p className={`mt-1 text-xs ${selectedPack?.id === pack.id ? "text-slate-300" : "text-slate-500"}`}>
-                    {new Date(pack.created_at).toLocaleString("en-GB", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    <time dateTime={pack.created_at} suppressHydrationWarning>
+                      {formatPackCreatedAt(pack.created_at)}
+                    </time>
                   </p>
                 </button>
               ))
