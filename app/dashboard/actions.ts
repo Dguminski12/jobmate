@@ -5,9 +5,10 @@ import { createJobForUser, deleteJobForUser, getAuthedClient, updateJobForUser }
 import { createJobSchema, deleteJobSchema, updateJobSchema } from "@/lib/jobs/validation";
 import type { JobActionState, JobDeleteActionState } from "@/lib/jobs/types";
 import { createInterviewPackForUser } from "@/lib/interview-packs/server";
-import { generateInterviewPackMock } from "@/lib/interview-packs/service";
+import { generateInterviewPack } from "@/lib/interview-packs/service";
 import { generateInterviewPackSchema } from "@/lib/interview-packs/validation";
 import type { GenerateInterviewPackActionState } from "@/lib/interview-packs/types";
+import { extractCvTextFromFile, toImageDataUrls } from "@/lib/interview-packs/parsing";
 
 function collectFormData(formData: FormData) {
   return Object.fromEntries(formData.entries());
@@ -59,6 +60,12 @@ function normalizeScreenshotNames(formData: FormData) {
     .getAll("jobScreenshots")
     .map((entry) => (entry instanceof File ? entry.name : ""))
     .filter((name) => name.length > 0);
+}
+
+function getScreenshotFiles(formData: FormData) {
+  return formData
+    .getAll("jobScreenshots")
+    .filter((entry): entry is File => entry instanceof File && entry.size > 0);
 }
 
 export async function createJobAction(
@@ -136,6 +143,7 @@ export async function generateInterviewPackAction(
 ): Promise<GenerateInterviewPackActionState> {
   const cvMode = normalizeTextInput(formData.get("cvMode"));
   const cvFile = formData.get("cvFile");
+  const screenshotFiles = getScreenshotFiles(formData);
 
   const parsed = generateInterviewPackSchema.safeParse({
     title: normalizeTextInput(formData.get("title")),
@@ -177,13 +185,35 @@ export async function generateInterviewPackAction(
   const { user } = await getAuthedClient();
 
   try {
-    const aiResponse = await generateInterviewPackMock(parsed.data);
+    let resolvedCvText = parsed.data.cvText ?? "";
+
+    if (parsed.data.cvMode === "file") {
+      if (!(cvFile instanceof File) || cvFile.size <= 0) {
+        return returnGenerateError("Upload a CV file before generating.", {
+          cvFile: "Upload a CV file before generating.",
+        });
+      }
+
+      resolvedCvText = await extractCvTextFromFile(cvFile);
+    }
+
+    const screenshotDataUrls = await toImageDataUrls(screenshotFiles);
+
+    const aiResponse = await generateInterviewPack({
+      input: {
+        ...parsed.data,
+        cvText: resolvedCvText,
+      },
+      cvText: resolvedCvText,
+      screenshotDataUrls,
+    });
+
     const pack = await createInterviewPackForUser(
       {
         title: parsed.data.title,
         cvSource: parsed.data.cvMode,
         cvFileName: parsed.data.cvFileName,
-        cvText: parsed.data.cvText,
+        cvText: resolvedCvText,
         jobUrl: parsed.data.jobUrl,
         jobDescription: parsed.data.jobDescription,
         screenshotNames: parsed.data.screenshotNames,

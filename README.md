@@ -1,5 +1,25 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Environment Variables
+
+Add these values in `.env.local`:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+OPENAI_API_KEY=...
+# Optional, defaults to gpt-4.1-mini
+OPENAI_MODEL=gpt-4.1-mini
+```
+
+If `OPENAI_API_KEY` is missing, Interview Pack generation falls back to a local mock response.
+
+## Interview Pack Generation
+
+- CV file parsing is implemented for PDF and DOCX uploads.
+- Screenshot uploads are passed to the AI request for OCR-style context extraction.
+- Generation is isolated behind one service so model/provider swaps are straightforward.
+
 ## Getting Started
 
 First, run the development server:
