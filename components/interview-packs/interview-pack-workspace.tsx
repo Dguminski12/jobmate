@@ -303,7 +303,6 @@ function InterviewPackView({ pack }: { pack: InterviewPackRecord }) {
 
 export default function InterviewPackWorkspace({ packs, packsTableMissing }: InterviewPackWorkspaceProps) {
   const [state, formAction, isPending] = useActionState(generateInterviewPackAction, initialState);
-  const [isClientHydrated, setIsClientHydrated] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [cvMode, setCvMode] = useState<"file" | "text">("file");
   const [cvFileName, setCvFileName] = useState<string | null>(null);
@@ -324,11 +323,7 @@ export default function InterviewPackWorkspace({ packs, packsTableMissing }: Int
           text: packs[0].cv_text ?? "",
         }
       : null;
-  const activeCvDraft = isClientHydrated ? persistedCvDraft ?? latestSavedCvDraft : latestSavedCvDraft;
-
-  useEffect(() => {
-    setIsClientHydrated(true);
-  }, []);
+  const activeCvDraft = persistedCvDraft ?? latestSavedCvDraft;
 
   const submittedCvMode = cvMode === "file" && !cvFileName && activeCvDraft ? activeCvDraft.mode : cvMode;
   const submittedCvText = cvText ?? activeCvDraft?.text ?? "";
