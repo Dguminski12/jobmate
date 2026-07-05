@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { loginSchema, type LoginFormValues } from "@/lib/validation/auth";
 
@@ -21,7 +20,6 @@ function parseFieldErrors(error: { issues: Array<{ path: Array<string | number>;
 }
 
 export default function LoginForm() {
-  const router = useRouter();
   const [supabase] = useState(() => createSupabaseBrowserClient());
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);

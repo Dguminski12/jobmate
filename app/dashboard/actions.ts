@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { createJobForUser, deleteJobForUser, getAuthedClient, updateJobForUser } from "@/lib/jobs/server";
 import { createJobSchema, deleteJobSchema, updateJobSchema } from "@/lib/jobs/validation";
 import type { JobActionState, JobDeleteActionState } from "@/lib/jobs/types";
+import { createInterviewPackForUser } from "@/lib/interview-packs/server";
+import { generateInterviewPackMock } from "@/lib/interview-packs/service";
+import { generateInterviewPackSchema } from "@/lib/interview-packs/validation";
+import type { GenerateInterviewPackActionState } from "@/lib/interview-packs/types";
 
 function collectFormData(formData: FormData) {
   return Object.fromEntries(formData.entries());
@@ -29,6 +33,32 @@ function returnFormError(message: string, fieldErrors?: JobActionState["fieldErr
     message,
     fieldErrors,
   };
+}
+
+function returnGenerateError(
+  message: string,
+  fieldErrors?: GenerateInterviewPackActionState["fieldErrors"],
+): GenerateInterviewPackActionState {
+  return {
+    status: "error",
+    message,
+    fieldErrors,
+  };
+}
+
+function normalizeTextInput(value: FormDataEntryValue | null) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value.trim();
+}
+
+function normalizeScreenshotNames(formData: FormData) {
+  return formData
+    .getAll("jobScreenshots")
+    .map((entry) => (entry instanceof File ? entry.name : ""))
+    .filter((name) => name.length > 0);
 }
 
 export async function createJobAction(
@@ -97,5 +127,80 @@ export async function deleteJobAction(
       status: "error",
       message: error instanceof Error ? error.message : "Unable to delete the job.",
     };
+  }
+}
+
+export async function generateInterviewPackAction(
+  _previousState: GenerateInterviewPackActionState,
+  formData: FormData,
+): Promise<GenerateInterviewPackActionState> {
+  const cvMode = normalizeTextInput(formData.get("cvMode"));
+  const cvFile = formData.get("cvFile");
+
+  const parsed = generateInterviewPackSchema.safeParse({
+    title: normalizeTextInput(formData.get("title")),
+    cvMode,
+    cvText: normalizeTextInput(formData.get("cvText")),
+    cvFileName: cvFile instanceof File && cvFile.size > 0 ? cvFile.name : "",
+    jobUrl: normalizeTextInput(formData.get("jobUrl")),
+    jobDescription: normalizeTextInput(formData.get("jobDescription")),
+    screenshotNames: normalizeScreenshotNames(formData),
+    additionalInstructions: normalizeTextInput(formData.get("additionalInstructions")),
+  });
+
+  if (!parsed.success) {
+    const mappedErrors: NonNullable<GenerateInterviewPackActionState["fieldErrors"]> = {};
+
+    for (const issue of parsed.error.issues) {
+      const path = issue.path[0];
+
+      if (path === "title") {
+        mappedErrors.title = issue.message;
+      }
+
+      if (path === "cvText") {
+        mappedErrors.cvText = issue.message;
+      }
+
+      if (path === "cvFileName") {
+        mappedErrors.cvFile = issue.message;
+      }
+
+      if (path === "jobDescription") {
+        mappedErrors.jobDetails = issue.message;
+      }
+    }
+
+    return returnGenerateError("Fix the highlighted fields to continue.", mappedErrors);
+  }
+
+  const { user } = await getAuthedClient();
+
+  try {
+    const aiResponse = await generateInterviewPackMock(parsed.data);
+    const pack = await createInterviewPackForUser(
+      {
+        title: parsed.data.title,
+        cvSource: parsed.data.cvMode,
+        cvFileName: parsed.data.cvFileName,
+        cvText: parsed.data.cvText,
+        jobUrl: parsed.data.jobUrl,
+        jobDescription: parsed.data.jobDescription,
+        screenshotNames: parsed.data.screenshotNames,
+        additionalInstructions: parsed.data.additionalInstructions,
+        aiResponse,
+      },
+      user.id,
+    );
+
+    revalidatePath("/dashboard");
+
+    return {
+      status: "success",
+      message: "Interview Pack generated and saved.",
+      pack,
+    };
+  } catch (error) {
+    return returnGenerateError(error instanceof Error ? error.message : "Unable to generate interview pack.");
   }
 }

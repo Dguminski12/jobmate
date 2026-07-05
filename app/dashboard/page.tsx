@@ -3,9 +3,12 @@ import { redirect } from "next/navigation";
 import SignOutButton from "@/components/auth/sign-out-button";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import JobsDashboard from "@/components/jobs/jobs-dashboard";
+import InterviewPackWorkspace from "@/components/interview-packs/interview-pack-workspace";
 import { getJobs } from "@/lib/jobs/server";
 import type { JobRecord } from "@/lib/jobs/types";
+import type { InterviewPackRecord } from "@/lib/interview-packs/types";
 import { dashboardFiltersSchema } from "@/lib/jobs/validation";
+import { getInterviewPacksForUser } from "@/lib/interview-packs/server";
 
 type DashboardSearchParams = Record<string, string | string[] | undefined>;
 
@@ -44,6 +47,8 @@ export default async function DashboardPage({
 
   let jobs: JobRecord[] = [];
   let jobsTableMissing = false;
+  let interviewPacks: InterviewPackRecord[] = [];
+  let interviewPacksTableMissing = false;
 
   try {
     jobs = await getJobs(filters);
@@ -54,6 +59,19 @@ export default async function DashboardPage({
       message.includes("Could not find the table");
 
     if (!jobsTableMissing) {
+      throw error;
+    }
+  }
+
+  try {
+    interviewPacks = await getInterviewPacksForUser(user.id);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    interviewPacksTableMissing =
+      message.includes("public.interview_packs") ||
+      message.includes("Could not find the table");
+
+    if (!interviewPacksTableMissing) {
       throw error;
     }
   }
@@ -75,18 +93,25 @@ export default async function DashboardPage({
               Welcome back, {displayName}.
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
-              Your authenticated workspace is ready. Upload a CV, paste a job description, and generate tailored cover letters, interview questions, and STAR answers.
+              Generate AI-powered interview packs from your CV and role details, then use the application tracker as a secondary workspace.
             </p>
           </div>
 
           <SignOutButton />
         </header>
 
-        <section className="mt-8">
+        <InterviewPackWorkspace packs={interviewPacks} packsTableMissing={interviewPacksTableMissing} />
+
+        <section className="mt-10">
+          <div className="mb-4">
+            <p className="text-xs font-semibold tracking-[0.26em] text-slate-500 uppercase">Secondary workflow</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Application Tracker</h2>
+          </div>
+
           {jobsTableMissing ? (
             <div className="rounded-[2rem] border border-amber-200 bg-amber-50/90 p-6 shadow-[0_18px_50px_rgba(146,64,14,0.08)]">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">Database setup required</p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-amber-950">The jobs table has not been created in Supabase yet.</h2>
+              <h3 className="mt-2 text-xl font-semibold tracking-tight text-amber-950">The jobs table has not been created in Supabase yet.</h3>
               <p className="mt-3 max-w-3xl text-sm leading-7 text-amber-900/80">
                 Run the SQL in <strong>supabase/schema.sql</strong>, then run <strong>supabase/migrations/20260704_create_jobs.sql</strong> in your Supabase SQL editor.
                 Once complete, refresh this page and your job tracker will load normally.
