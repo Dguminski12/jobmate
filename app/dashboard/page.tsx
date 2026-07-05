@@ -78,9 +78,9 @@ export default async function DashboardPage({
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(45,212,191,0.16),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef5ff_100%)] px-6 py-10 text-slate-950">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(45,212,191,0.16),transparent_30%),linear-gradient(180deg,#f8fafc_0%,#eef5ff_100%)] px-6 py-10 text-slate-950">
       <div className="mx-auto w-full max-w-6xl">
-        <header className="flex flex-col gap-4 rounded-[2rem] border border-white/80 bg-white/90 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.12)] backdrop-blur-xl md:flex-row md:items-center md:justify-between md:p-8">
+        <header className="flex flex-col gap-4 rounded-4xl border border-white/80 bg-white/90 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.12)] backdrop-blur-xl md:flex-row md:items-center md:justify-between md:p-8">
           <div>
             <SiteBrand href="/" showSubtitle={false} />
             <h1 className="mt-5 text-3xl font-semibold tracking-tight md:text-4xl">
@@ -106,7 +106,7 @@ export default async function DashboardPage({
           </div>
 
           {jobsTableMissing ? (
-            <div className="rounded-[2rem] border border-amber-200 bg-amber-50/90 p-6 shadow-[0_18px_50px_rgba(146,64,14,0.08)]">
+            <div className="rounded-4xl border border-amber-200 bg-amber-50/90 p-6 shadow-[0_18px_50px_rgba(146,64,14,0.08)]">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">Database setup required</p>
               <h3 className="mt-2 text-xl font-semibold tracking-tight text-amber-950">The jobs table has not been created in Supabase yet.</h3>
               <p className="mt-3 max-w-3xl text-sm leading-7 text-amber-900/80">

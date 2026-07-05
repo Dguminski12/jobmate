@@ -4,11 +4,11 @@ import ThemeToggle from "@/components/theme/theme-toggle";
 
 export default function Home() {
   return (
-    <main className="relative isolate min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(45,212,191,0.22),_transparent_32%),radial-gradient(circle_at_top_right,_rgba(59,130,246,0.18),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef5ff_42%,_#f7fbff_100%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(15,23,42,0.6),_transparent_32%),radial-gradient(circle_at_top_right,_rgba(30,41,59,0.42),_transparent_30%),linear-gradient(180deg,_#020617_0%,_#01030a_42%,_#01030a_100%)]">
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,_rgba(45,212,191,0.22),_transparent_32%),radial-gradient(circle_at_top_right,_rgba(59,130,246,0.18),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef5ff_42%,_#f7fbff_100%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(15,23,42,0.6),_transparent_32%),radial-gradient(circle_at_top_right,_rgba(30,41,59,0.42),_transparent_30%),linear-gradient(180deg,_#020617_0%,_#01030a_42%,_#01030a_100%)]" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[32rem] bg-[linear-gradient(135deg,_rgba(15,23,42,0.06),_rgba(15,23,42,0))] dark:bg-[linear-gradient(135deg,_rgba(15,23,42,0.34),_rgba(15,23,42,0))]" />
+    <main className="relative isolate min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(45,212,191,0.22),transparent_32%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.18),transparent_30%),linear-gradient(180deg,#f8fafc_0%,#eef5ff_42%,#f7fbff_100%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(15,23,42,0.6),transparent_32%),radial-gradient(circle_at_top_right,rgba(30,41,59,0.42),transparent_30%),linear-gradient(180deg,#020617_0%,#01030a_42%,#01030a_100%)]">
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,rgba(45,212,191,0.22),transparent_32%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.18),transparent_30%),linear-gradient(180deg,#f8fafc_0%,#eef5ff_42%,#f7fbff_100%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(15,23,42,0.6),transparent_32%),radial-gradient(circle_at_top_right,rgba(30,41,59,0.42),transparent_30%),linear-gradient(180deg,#020617_0%,#01030a_42%,#01030a_100%)]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-128 bg-[linear-gradient(135deg,rgba(15,23,42,0.06),rgba(15,23,42,0))] dark:bg-[linear-gradient(135deg,rgba(15,23,42,0.34),rgba(15,23,42,0))]" />
 
-      <header className="sticky top-0 z-50 mx-auto flex w-full max-w-7xl items-center justify-between rounded-[2rem] border border-slate-200/80 bg-white/90 px-6 py-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl lg:px-10 dark:border-slate-800 dark:bg-slate-950/85 dark:shadow-[0_18px_50px_rgba(2,6,23,0.4)]">
+      <header className="sticky top-0 z-50 mx-auto flex w-full max-w-7xl items-center justify-between rounded-4xl border border-slate-200/80 bg-white/90 px-6 py-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl lg:px-10 dark:border-slate-800 dark:bg-slate-950/85 dark:shadow-[0_18px_50px_rgba(2,6,23,0.4)]">
         <SiteBrand />
 
         <nav className="hidden items-center gap-8 text-sm text-slate-600 md:flex dark:text-slate-400">
@@ -92,7 +92,7 @@ export default function Home() {
           <div className="absolute -left-8 top-10 h-32 w-32 rounded-full bg-emerald-400/20 blur-3xl" />
           <div className="absolute -right-6 bottom-8 h-40 w-40 rounded-full bg-blue-400/20 blur-3xl" />
 
-          <div className="relative rounded-[2rem] border border-white/80 bg-white/85 p-5 shadow-[0_30px_80px_rgba(15,23,42,0.14)] backdrop-blur-xl">
+          <div className="relative rounded-4xl border border-white/80 bg-white/85 p-5 shadow-[0_30px_80px_rgba(15,23,42,0.14)] backdrop-blur-xl">
             <div className="flex items-center justify-between border-b border-slate-200 pb-4">
               <div>
                 <div className="text-sm font-semibold text-slate-950">Ready to apply</div>
@@ -143,7 +143,7 @@ export default function Home() {
                   <span className="font-semibold text-slate-950">92%</span>
                 </div>
                 <div className="mt-3 h-2 rounded-full bg-slate-100">
-                  <div className="h-2 w-[92%] rounded-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-600" />
+                  <div className="h-2 w-[92%] rounded-full bg-linear-to-r from-emerald-500 via-cyan-500 to-blue-600" />
                 </div>
               </div>
 
@@ -202,7 +202,7 @@ export default function Home() {
       </section>
 
       <section id="workflow" className="mx-auto w-full max-w-7xl px-6 pb-20 lg:px-10 lg:pb-28">
-        <div className="grid gap-6 rounded-[2rem] border border-white/80 bg-slate-950 p-8 text-white shadow-[0_24px_70px_rgba(15,23,42,0.18)] lg:grid-cols-[0.85fr_1.15fr] lg:p-10">
+        <div className="grid gap-6 rounded-4xl border border-white/80 bg-slate-950 p-8 text-white shadow-[0_24px_70px_rgba(15,23,42,0.18)] lg:grid-cols-[0.85fr_1.15fr] lg:p-10">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-400">
               Workflow
@@ -240,7 +240,7 @@ export default function Home() {
       </section>
 
       <section id="security" className="mx-auto w-full max-w-7xl px-6 pb-24 lg:px-10 lg:pb-32">
-        <div className="flex flex-col items-start justify-between gap-6 rounded-[2rem] border border-slate-200 bg-white/85 p-8 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur md:flex-row md:items-center">
+        <div className="flex flex-col items-start justify-between gap-6 rounded-4xl border border-slate-200 bg-white/85 p-8 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur md:flex-row md:items-center">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500">
               Ready for launch

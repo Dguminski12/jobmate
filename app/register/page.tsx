@@ -16,7 +16,7 @@ export default async function RegisterPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(45,212,191,0.16),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef5ff_100%)] px-6 py-10 text-slate-950">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(45,212,191,0.16),transparent_30%),linear-gradient(180deg,#f8fafc_0%,#eef5ff_100%)] px-6 py-10 text-slate-950">
       <div className="mx-auto flex w-full max-w-6xl justify-end">
         <ThemeToggle />
       </div>
@@ -45,7 +45,7 @@ export default async function RegisterPage() {
             </div>
           </section>
 
-          <section className="rounded-[2rem] border border-white/80 bg-white/90 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.12)] backdrop-blur-xl md:p-8">
+          <section className="rounded-4xl border border-white/80 bg-white/90 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.12)] backdrop-blur-xl md:p-8">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-500">
                 Get started

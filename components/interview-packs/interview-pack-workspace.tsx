@@ -304,7 +304,7 @@ export default function InterviewPackWorkspace({ packs, packsTableMissing }: Int
 
   return (
     <section className="mt-8 space-y-6">
-      <article className="rounded-[2rem] border border-white/80 bg-white/90 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl md:p-8">
+      <article className="rounded-4xl border border-white/80 bg-white/90 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl md:p-8">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-xs font-semibold tracking-[0.28em] text-slate-500 uppercase">Primary workflow</p>
@@ -530,7 +530,7 @@ export default function InterviewPackWorkspace({ packs, packsTableMissing }: Int
       </article>
 
       <section className="grid gap-6 lg:grid-cols-[320px_1fr]">
-        <aside className="rounded-[2rem] border border-white/80 bg-white/90 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+        <aside className="rounded-4xl border border-white/80 bg-white/90 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="text-lg font-semibold tracking-tight text-slate-950">Saved Interview Packs</h3>
@@ -583,7 +583,7 @@ export default function InterviewPackWorkspace({ packs, packsTableMissing }: Int
           {selectedPack ? (
             <InterviewPackView key={selectedPack.id} pack={selectedPack} />
           ) : (
-            <div className="rounded-[2rem] border border-dashed border-slate-300 bg-white/80 p-10 text-center text-sm text-slate-600">
+            <div className="rounded-4xl border border-dashed border-slate-300 bg-white/80 p-10 text-center text-sm text-slate-600">
               Select a pack to view generated content.
             </div>
           )}
