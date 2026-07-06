@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
-import { FREE_GENERATION_LIMIT } from "@/lib/billing/types";
+import { getPaywallBlockedMessage, hasGenerationAccess } from "@/lib/billing/logic";
 import { consumeGenerationAccess, getBillingAccessSummary } from "@/lib/billing/server";
 import { getAppUrl, getPaywallPriceData, getStripeClient } from "@/lib/billing/stripe";
 import type { BillingCheckoutActionState } from "@/lib/billing/types";
@@ -73,14 +73,6 @@ function returnBillingCheckoutError(message: string): BillingCheckoutActionState
     status: "error",
     message,
   };
-}
-
-function getPaywallBlockedMessage() {
-  return `Your ${FREE_GENERATION_LIMIT} free generations are used up. Unlock 31 days of unlimited generations and regenerations for £9.99.`;
-}
-
-function hasGenerationAccess(summary: Awaited<ReturnType<typeof getBillingAccessSummary>>) {
-  return summary.hasActiveAccess || summary.freeGenerationsRemaining > 0;
 }
 
 async function consumeGenerationCreditAfterSuccess(userId: string) {

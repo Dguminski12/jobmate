@@ -7,18 +7,7 @@ import {
   type GenerationAccessResult,
   type UserEntitlementRecord,
 } from "./types";
-
-function toBillingAccessSummary(record: Pick<UserEntitlementRecord, "free_generations_used" | "paid_access_until">): BillingAccessSummary {
-  const paidAccessUntil = record.paid_access_until;
-  const hasActiveAccess = Boolean(paidAccessUntil && new Date(paidAccessUntil).getTime() > Date.now());
-
-  return {
-    freeGenerationsUsed: record.free_generations_used,
-    freeGenerationsRemaining: Math.max(0, FREE_GENERATION_LIMIT - record.free_generations_used),
-    paidAccessUntil,
-    hasActiveAccess,
-  };
-}
+import { toBillingAccessSummary } from "./logic";
 
 async function getOrCreateEntitlementRecord(userId: string): Promise<UserEntitlementRecord> {
   const supabase = await createSupabaseServerClient();
