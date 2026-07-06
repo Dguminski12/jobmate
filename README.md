@@ -17,7 +17,7 @@ STRIPE_WEBHOOK_SECRET=...
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-If `OPENAI_API_KEY` is missing, Interview Pack generation falls back to a local mock response.
+`OPENAI_API_KEY` is required for Interview Pack generation.
 
 ## Deployment Variables
 

@@ -21,6 +21,23 @@ function addDays(date: Date, days: number) {
 export async function grantPaidAccess(input: GrantPaidAccessInput) {
   const supabase = createSupabaseAdminClient();
 
+  const { data: existingPurchase, error: purchaseLookupError } = await supabase
+    .from("payment_purchases")
+    .select("id")
+    .eq("stripe_checkout_session_id", input.stripeCheckoutSessionId)
+    .maybeSingle();
+
+  if (purchaseLookupError) {
+    throw new Error(purchaseLookupError.message);
+  }
+
+  if (existingPurchase) {
+    return {
+      accessStartsAt: null,
+      accessEndsAt: null,
+    };
+  }
+
   const { data: existingEntitlement, error: entitlementError } = await supabase
     .from("user_entitlements")
     .select("*")
@@ -34,7 +51,16 @@ export async function grantPaidAccess(input: GrantPaidAccessInput) {
   const entitlement = existingEntitlement as UserEntitlementRecord | null;
   const now = new Date();
   const existingPaidAccessUntil = entitlement?.paid_access_until ? new Date(entitlement.paid_access_until) : null;
-  const accessStartsAt = existingPaidAccessUntil && existingPaidAccessUntil > now ? existingPaidAccessUntil : now;
+  const hasActiveAccess = Boolean(existingPaidAccessUntil && existingPaidAccessUntil > now);
+
+  if (hasActiveAccess) {
+    return {
+      accessStartsAt: null,
+      accessEndsAt: null,
+    };
+  }
+
+  const accessStartsAt = now;
   const accessEndsAt = addDays(accessStartsAt, PAID_ACCESS_DAYS);
 
   const { error: upsertError } = await supabase.from("user_entitlements").upsert({

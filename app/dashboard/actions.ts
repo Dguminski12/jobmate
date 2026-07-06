@@ -78,6 +78,18 @@ function getPaywallBlockedMessage() {
   return "Your 3 free generations are used up. Unlock 31 days of unlimited generations and regenerations for £9.99.";
 }
 
+function hasGenerationAccess(summary: Awaited<ReturnType<typeof getBillingAccessSummary>>) {
+  return summary.hasActiveAccess || summary.freeGenerationsRemaining > 0;
+}
+
+async function consumeGenerationCreditAfterSuccess(userId: string) {
+  try {
+    await consumeGenerationAccess(userId);
+  } catch {
+    // Do not fail the request after a successful generation save.
+  }
+}
+
 async function resolveRequestAppUrl() {
   const headerStore = await headers();
   const origin = headerStore.get("origin");
@@ -252,9 +264,9 @@ export async function generateInterviewPackAction(
       }
     }
 
-    const generationAccess = await consumeGenerationAccess(user.id);
+    const billingAccess = await getBillingAccessSummary(user.id);
 
-    if (!generationAccess.allowed) {
+    if (!hasGenerationAccess(billingAccess)) {
       return returnGenerateError(getPaywallBlockedMessage());
     }
 
@@ -273,7 +285,7 @@ export async function generateInterviewPackAction(
       {
         title: parsed.data.title,
         cvSource: parsed.data.cvMode,
-          cvFileName: resolvedCvFileName,
+        cvFileName: resolvedCvFileName,
         cvText: resolvedCvText,
         jobUrl: parsed.data.jobUrl,
         jobDescription: parsed.data.jobDescription,
@@ -283,6 +295,8 @@ export async function generateInterviewPackAction(
       },
       user.id,
     );
+
+    await consumeGenerationCreditAfterSuccess(user.id);
 
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/packs");
@@ -382,9 +396,9 @@ export async function regenerateInterviewPackAction(
       return returnRegeneratePackError("This pack has no saved CV text. Create a new pack from your CV first.");
     }
 
-    const generationAccess = await consumeGenerationAccess(user.id);
+    const billingAccess = await getBillingAccessSummary(user.id);
 
-    if (!generationAccess.allowed) {
+    if (!hasGenerationAccess(billingAccess)) {
       return returnRegeneratePackError(getPaywallBlockedMessage());
     }
 
@@ -409,6 +423,8 @@ export async function regenerateInterviewPackAction(
       additionalInstructions: parsed.data.additionalPrompt,
       aiResponse,
     });
+
+    await consumeGenerationCreditAfterSuccess(user.id);
 
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/packs");
