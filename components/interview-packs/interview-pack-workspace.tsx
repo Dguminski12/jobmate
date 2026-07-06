@@ -267,7 +267,13 @@ function InterviewPackView({
     addInterviewPackToTrackerAction,
     addToTrackerInitialState,
   );
+  const [additionalPrompt, setAdditionalPrompt] = useState(pack.additional_instructions ?? "");
   const content = normalizeInterviewPackContent(pack.ai_response);
+
+  function handleRegenerateAction(formData: FormData) {
+    setAdditionalPrompt("");
+    regenerateAction(formData);
+  }
 
   return (
     <div className="grid gap-4">
@@ -298,12 +304,13 @@ function InterviewPackView({
           </form>
         </div>
 
-        <form action={regenerateAction} className="mt-4">
+        <form action={handleRegenerateAction} className="mt-4">
           <input type="hidden" name="packId" value={pack.id} />
           <textarea
             name="additionalPrompt"
             rows={4}
-            defaultValue={pack.additional_instructions ?? ""}
+            value={additionalPrompt}
+            onChange={(event) => setAdditionalPrompt(event.target.value)}
             placeholder="Example: Focus on leadership examples and keep outputs concise in UK English."
             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
           />
