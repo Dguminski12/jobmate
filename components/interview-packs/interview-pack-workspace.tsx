@@ -8,7 +8,12 @@ import {
   generateInterviewPackAction,
   regenerateInterviewPackAction,
 } from "@/app/dashboard/actions";
-import { PAYWALL_PRICE_LABEL, type BillingAccessSummary, type BillingCheckoutActionState } from "@/lib/billing/types";
+import {
+  FREE_GENERATION_LIMIT,
+  PAYWALL_PRICE_LABEL,
+  type BillingAccessSummary,
+  type BillingCheckoutActionState,
+} from "@/lib/billing/types";
 import type {
   AddPackToTrackerActionState,
   CVSource,
@@ -615,7 +620,7 @@ export default function InterviewPackWorkspace({
               <h3 className="mt-2 text-lg font-semibold tracking-tight text-cyan-950">
                 {billingAccessSummary.hasActiveAccess
                   ? `Unlimited access active until ${formatPaidAccessUntil(billingAccessSummary.paidAccessUntil ?? new Date().toISOString())}`
-                  : `${billingAccessSummary.freeGenerationsRemaining} of 3 free generations left`}
+                  : `${billingAccessSummary.freeGenerationsRemaining} of ${FREE_GENERATION_LIMIT} free generations left`}
               </h3>
               <p className="mt-2 max-w-2xl text-sm leading-7 text-cyan-950/80">
                 Generations and regenerations both count toward the free allowance. After that, unlock 31 days of unlimited use for {PAYWALL_PRICE_LABEL}.

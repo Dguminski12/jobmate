@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
+import { FREE_GENERATION_LIMIT } from "@/lib/billing/types";
 import { consumeGenerationAccess, getBillingAccessSummary } from "@/lib/billing/server";
 import { getAppUrl, getPaywallPriceData, getStripeClient } from "@/lib/billing/stripe";
 import type { BillingCheckoutActionState } from "@/lib/billing/types";
@@ -75,7 +76,7 @@ function returnBillingCheckoutError(message: string): BillingCheckoutActionState
 }
 
 function getPaywallBlockedMessage() {
-  return "Your 3 free generations are used up. Unlock 31 days of unlimited generations and regenerations for £9.99.";
+  return `Your ${FREE_GENERATION_LIMIT} free generations are used up. Unlock 31 days of unlimited generations and regenerations for £9.99.`;
 }
 
 function hasGenerationAccess(summary: Awaited<ReturnType<typeof getBillingAccessSummary>>) {
@@ -85,8 +86,11 @@ function hasGenerationAccess(summary: Awaited<ReturnType<typeof getBillingAccess
 async function consumeGenerationCreditAfterSuccess(userId: string) {
   try {
     await consumeGenerationAccess(userId);
-  } catch {
-    // Do not fail the request after a successful generation save.
+  } catch (error) {
+    console.error("[billing] Failed to consume generation credit after successful pack save", {
+      userId,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 

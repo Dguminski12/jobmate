@@ -39,7 +39,7 @@ If you're using Supabase auth, also add your deployed site URL to the allowed re
 ## Paywall Setup
 
 - Run the billing migration in [supabase/migrations/20260705_create_user_entitlements.sql](supabase/migrations/20260705_create_user_entitlements.sql).
-- The paywall allows 3 free generations per user, and regenerations count toward the same limit.
+- The paywall currently allows 999 free generations per user for testing, and regenerations count toward the same limit.
 - After the free limit is reached, users can buy 31 days of unlimited access for £9.99 through Stripe Checkout.
 - Configure a Stripe webhook endpoint pointing to `/api/stripe/webhook`.
 - In local development, run Stripe CLI forwarding so webhook events reach your app:

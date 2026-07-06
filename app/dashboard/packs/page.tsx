@@ -1,5 +1,6 @@
 import { getBillingAccessSummary } from "@/lib/billing/server";
 import type { BillingAccessSummary } from "@/lib/billing/types";
+import { FREE_GENERATION_LIMIT } from "@/lib/billing/types";
 import { getInterviewPacksForUser } from "@/lib/interview-packs/server";
 import type { InterviewPackRecord } from "@/lib/interview-packs/types";
 import { getAuthedClient } from "@/lib/jobs/server";
@@ -19,7 +20,7 @@ export default async function DashboardPacksPage({ searchParams }: DashboardPack
   let billingStatusMessage = "";
   let billingAccessSummary: BillingAccessSummary = {
     freeGenerationsUsed: 0,
-    freeGenerationsRemaining: 3,
+    freeGenerationsRemaining: FREE_GENERATION_LIMIT,
     paidAccessUntil: null,
     hasActiveAccess: false,
   };
@@ -56,7 +57,7 @@ export default async function DashboardPacksPage({ searchParams }: DashboardPack
   }
 
   if (resolvedSearchParams.billing === "cancelled") {
-    billingStatusMessage = "Checkout was cancelled. Your free generations remain available until the 3-use limit is reached.";
+    billingStatusMessage = `Checkout was cancelled. Your free generations remain available until the ${FREE_GENERATION_LIMIT}-use limit is reached.`;
   }
 
   return (
