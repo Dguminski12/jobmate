@@ -284,6 +284,7 @@ function InterviewPackView({
     addToTrackerInitialState,
   );
   const [additionalPrompt, setAdditionalPrompt] = useState("");
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const content = normalizeInterviewPackContent(pack.ai_response);
   const regenerationHistory = pack.regeneration_history ?? [];
 
@@ -324,21 +325,42 @@ function InterviewPackView({
         <form action={handleRegenerateAction} className="mt-4">
           <input type="hidden" name="packId" value={pack.id} />
           {regenerationHistory.length > 0 ? (
-            <div className="mb-4 rounded-2xl border border-slate-200 bg-white/80 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Regeneration History
-              </p>
-              <div className="mt-3 space-y-3">
-                {regenerationHistory.map((entry, index) => (
-                  <div key={`${entry.createdAt}-${index}`} className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-                    <p className="text-xs font-semibold text-slate-500">
-                      Edit {index + 1} · {formatRegenerationInstructionDate(entry.createdAt)}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-700">{entry.instruction}</p>
-                  </div>
-                ))}
+            isHistoryOpen ? (
+              <div className="mb-4 rounded-2xl border border-slate-200 bg-white/80 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Regeneration History
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setIsHistoryOpen(false)}
+                    className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
+                  >
+                    Hide
+                  </button>
+                </div>
+                <div className="mt-3 space-y-3">
+                  {regenerationHistory.map((entry, index) => (
+                    <div key={`${entry.createdAt}-${index}`} className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+                      <p className="text-xs font-semibold text-slate-500">
+                        Edit {index + 1} · {formatRegenerationInstructionDate(entry.createdAt)}
+                      </p>
+                      <p className="mt-1 text-sm text-slate-700">{entry.instruction}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="mb-4">
+                <button
+                  type="button"
+                  onClick={() => setIsHistoryOpen(true)}
+                  className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-950"
+                >
+                  View regeneration history ({regenerationHistory.length})
+                </button>
+              </div>
+            )
           ) : null}
           <textarea
             name="additionalPrompt"
