@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { FREE_GENERATION_LIMIT } from "@/lib/billing/types";
-import { getPaywallBlockedMessage, hasGenerationAccess, toBillingAccessSummary } from "@/lib/billing/logic";
+import {
+  getGenerationReservationBlockedMessage,
+  getPaywallBlockedMessage,
+  hasGenerationAccess,
+  toBillingAccessSummary,
+} from "@/lib/billing/logic";
 
 describe("billing logic", () => {
   it("computes remaining free generations from the configured limit", () => {
@@ -42,5 +47,13 @@ describe("billing logic", () => {
 
     expect(message).toContain(String(FREE_GENERATION_LIMIT));
     expect(message).toContain("31 days");
+  });
+
+  it("builds a cooldown message with retry timing", () => {
+    expect(getGenerationReservationBlockedMessage("cooldown_active", 9)).toContain("9 seconds");
+  });
+
+  it("builds an in-progress message with retry timing", () => {
+    expect(getGenerationReservationBlockedMessage("generation_in_progress", 45)).toContain("45 seconds");
   });
 });

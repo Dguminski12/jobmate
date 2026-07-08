@@ -4,8 +4,12 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
-import { getPaywallBlockedMessage, hasGenerationAccess } from "@/lib/billing/logic";
-import { consumeGenerationAccess, getBillingAccessSummary } from "@/lib/billing/server";
+import { getGenerationReservationBlockedMessage } from "@/lib/billing/logic";
+import {
+  getBillingAccessSummary,
+  releaseGenerationReservation,
+  reserveGenerationAccess,
+} from "@/lib/billing/server";
 import { getAppUrl, getPaywallPriceData, getStripeClient } from "@/lib/billing/stripe";
 import type { BillingCheckoutActionState } from "@/lib/billing/types";
 import { createJobForUser, deleteJobForUser, getAuthedClient, updateJobForUser } from "@/lib/jobs/server";
@@ -82,9 +86,20 @@ function returnBillingCheckoutError(message: string): BillingCheckoutActionState
 
 async function consumeGenerationCreditAfterSuccess(userId: string) {
   try {
-    await consumeGenerationAccess(userId);
+    await releaseGenerationReservation(userId, false);
   } catch (error) {
-    console.error("[billing] Failed to consume generation credit after successful pack save", {
+    console.error("[billing] Failed to release generation reservation after successful pack save", {
+      userId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+async function refundGenerationCreditAfterFailure(userId: string) {
+  try {
+    await releaseGenerationReservation(userId, true);
+  } catch (error) {
+    console.error("[billing] Failed to refund generation reservation after pack failure", {
       userId,
       error: error instanceof Error ? error.message : String(error),
     });
@@ -247,6 +262,7 @@ export async function generateInterviewPackAction(
   }
 
   const { user } = await getAuthedClient();
+  let hasActiveReservation = false;
 
   try {
     let resolvedCvText = parsed.data.cvText ?? "";
@@ -265,11 +281,18 @@ export async function generateInterviewPackAction(
       }
     }
 
-    const billingAccess = await getBillingAccessSummary(user.id);
+    const generationReservation = await reserveGenerationAccess(user.id);
 
-    if (!hasGenerationAccess(billingAccess)) {
-      return returnGenerateError(getPaywallBlockedMessage());
+    if (!generationReservation.allowed) {
+      return returnGenerateError(
+        getGenerationReservationBlockedMessage(
+          generationReservation.reason,
+          generationReservation.retryAfterSeconds,
+        ),
+      );
     }
+
+    hasActiveReservation = true;
 
     const screenshotDataUrls = await toImageDataUrls(screenshotFiles);
 
@@ -314,6 +337,11 @@ export async function generateInterviewPackAction(
       pack,
     };
   } catch (error) {
+    if (hasActiveReservation) {
+      await refundGenerationCreditAfterFailure(user.id);
+      hasActiveReservation = false;
+    }
+
     return returnGenerateError(error instanceof Error ? error.message : "Unable to generate interview pack.");
   }
 }
@@ -389,6 +417,7 @@ export async function regenerateInterviewPackAction(
   }
 
   const { user } = await getAuthedClient();
+  let hasActiveReservation = false;
 
   try {
     const existingPack = await getInterviewPackForUserById(parsed.data.packId, user.id);
@@ -403,11 +432,18 @@ export async function regenerateInterviewPackAction(
       return returnRegeneratePackError("This pack has no saved CV text. Create a new pack from your CV first.");
     }
 
-    const billingAccess = await getBillingAccessSummary(user.id);
+    const generationReservation = await reserveGenerationAccess(user.id);
 
-    if (!hasGenerationAccess(billingAccess)) {
-      return returnRegeneratePackError(getPaywallBlockedMessage());
+    if (!generationReservation.allowed) {
+      return returnRegeneratePackError(
+        getGenerationReservationBlockedMessage(
+          generationReservation.reason,
+          generationReservation.retryAfterSeconds,
+        ),
+      );
     }
+
+    hasActiveReservation = true;
 
     const generationContext = deriveInterviewPackGenerationContext(existingPack);
     const regenerationHistory = appendRegenerationInstruction(
@@ -440,6 +476,11 @@ export async function regenerateInterviewPackAction(
       pack: updatedPack,
     };
   } catch (error) {
+    if (hasActiveReservation) {
+      await refundGenerationCreditAfterFailure(user.id);
+      hasActiveReservation = false;
+    }
+
     return returnRegeneratePackError(error instanceof Error ? error.message : "Unable to regenerate this interview pack.");
   }
 }
