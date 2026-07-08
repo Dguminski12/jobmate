@@ -157,6 +157,13 @@ export async function releaseGenerationReservation(
   refundFreeGeneration: boolean,
   wasSuccessful: boolean,
   errorMessage?: string,
+  usage?: {
+    modelName: string;
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    estimatedCostGbp: number;
+  },
 ) {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("release_generation_reservation", {
@@ -164,6 +171,11 @@ export async function releaseGenerationReservation(
     p_refund_free_generation: refundFreeGeneration,
     p_was_successful: wasSuccessful,
     p_error_message: errorMessage ?? null,
+    p_model_name: usage?.modelName ?? null,
+    p_prompt_tokens: usage?.promptTokens ?? null,
+    p_completion_tokens: usage?.completionTokens ?? null,
+    p_total_tokens: usage?.totalTokens ?? null,
+    p_estimated_cost_gbp: usage?.estimatedCostGbp ?? null,
   });
 
   if (error) {

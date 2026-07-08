@@ -1,12 +1,21 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { grantPaidAccess } from "@/lib/billing/admin";
+import { logError } from "@/lib/observability/server";
 import { getStripeClient, getStripeWebhookSecret } from "@/lib/billing/stripe";
 
 export async function POST(request: Request) {
   const signature = request.headers.get("stripe-signature");
 
   if (!signature) {
+    await logError({
+      source: "api",
+      message: "Stripe webhook rejected due to missing signature.",
+      metadata: {
+        route: "/api/stripe/webhook",
+      },
+      requestHeaders: request.headers,
+    });
     return NextResponse.json({ error: "Missing Stripe signature." }, { status: 400 });
   }
 
@@ -40,6 +49,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to process Stripe webhook.";
+    await logError({
+      source: "api",
+      message,
+      stack: error instanceof Error ? error.stack : null,
+      metadata: {
+        route: "/api/stripe/webhook",
+      },
+      requestHeaders: request.headers,
+    });
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

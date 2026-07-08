@@ -15,6 +15,7 @@ import type { BillingCheckoutActionState } from "@/lib/billing/types";
 import { createJobForUser, deleteJobForUser, getAuthedClient, updateJobForUser } from "@/lib/jobs/server";
 import { createJobSchema, deleteJobSchema, updateJobSchema } from "@/lib/jobs/validation";
 import type { JobActionState, JobDeleteActionState } from "@/lib/jobs/types";
+import { logAuditEvent, logError } from "@/lib/observability/server";
 import {
   createInterviewPackForUser,
   deleteInterviewPackForUser,
@@ -36,6 +37,7 @@ import type {
   AddPackToTrackerActionState,
   DeleteInterviewPackActionState,
   GenerateInterviewPackActionState,
+  InterviewPackGenerationResult,
   RegenerateInterviewPackActionState,
 } from "@/lib/interview-packs/types";
 import { extractCvTextFromFile, toImageDataUrls, validateJobScreenshotFiles } from "@/lib/interview-packs/parsing";
@@ -84,9 +86,9 @@ function returnBillingCheckoutError(message: string): BillingCheckoutActionState
   };
 }
 
-async function consumeGenerationCreditAfterSuccess(userId: string) {
+async function consumeGenerationCreditAfterSuccess(userId: string, usage?: InterviewPackGenerationResult["usage"]) {
   try {
-    await releaseGenerationReservation(userId, false, true);
+    await releaseGenerationReservation(userId, false, true, undefined, usage);
   } catch (error) {
     console.error("[billing] Failed to release generation reservation after successful pack save", {
       userId,
@@ -145,6 +147,17 @@ function getScreenshotFiles(formData: FormData) {
     .filter((entry): entry is File => entry instanceof File && entry.size > 0);
 }
 
+function isUploadRelatedMessage(message: string) {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes("upload") ||
+    normalized.includes("screenshot") ||
+    normalized.includes("pdf") ||
+    normalized.includes("docx") ||
+    normalized.includes("cv file")
+  );
+}
+
 export async function createJobAction(
   _previousState: JobActionState,
   formData: FormData,
@@ -152,6 +165,17 @@ export async function createJobAction(
   const parsed = createJobSchema.safeParse(collectFormData(formData));
 
   if (!parsed.success) {
+    await logError({
+      source: "validation",
+      message: "Create job validation failed.",
+      metadata: {
+        action: "create_job",
+        issues: parsed.error.issues.map((issue) => ({
+          path: issue.path.join("."),
+          message: issue.message,
+        })),
+      },
+    });
     return returnFormError("Fix the highlighted fields.", mapFieldErrors(parsed.error));
   }
 
@@ -162,6 +186,15 @@ export async function createJobAction(
     revalidatePath("/dashboard/tracker");
     return { status: "success", message: "Job created successfully." };
   } catch (error) {
+    await logError({
+      userId: user.id,
+      source: "api",
+      message: error instanceof Error ? error.message : "Unable to create the job.",
+      stack: error instanceof Error ? error.stack : null,
+      metadata: {
+        action: "create_job",
+      },
+    });
     return returnFormError(error instanceof Error ? error.message : "Unable to create the job.");
   }
 }
@@ -173,6 +206,17 @@ export async function updateJobAction(
   const parsed = updateJobSchema.safeParse(collectFormData(formData));
 
   if (!parsed.success) {
+    await logError({
+      source: "validation",
+      message: "Update job validation failed.",
+      metadata: {
+        action: "update_job",
+        issues: parsed.error.issues.map((issue) => ({
+          path: issue.path.join("."),
+          message: issue.message,
+        })),
+      },
+    });
     return returnFormError("Fix the highlighted fields.", mapFieldErrors(parsed.error));
   }
 
@@ -183,6 +227,15 @@ export async function updateJobAction(
     revalidatePath("/dashboard/tracker");
     return { status: "success", message: "Job updated successfully." };
   } catch (error) {
+    await logError({
+      userId: user.id,
+      source: "api",
+      message: error instanceof Error ? error.message : "Unable to update the job.",
+      stack: error instanceof Error ? error.stack : null,
+      metadata: {
+        action: "update_job",
+      },
+    });
     return returnFormError(error instanceof Error ? error.message : "Unable to update the job.");
   }
 }
@@ -194,6 +247,13 @@ export async function deleteJobAction(
   const parsed = deleteJobSchema.safeParse(collectFormData(formData));
 
   if (!parsed.success) {
+    await logError({
+      source: "validation",
+      message: "Delete job validation failed.",
+      metadata: {
+        action: "delete_job",
+      },
+    });
     return {
       status: "error",
       message: "Missing job details.",
@@ -207,6 +267,15 @@ export async function deleteJobAction(
     revalidatePath("/dashboard/tracker");
     return { status: "success", message: "Job deleted successfully." };
   } catch (error) {
+    await logError({
+      userId: user.id,
+      source: "api",
+      message: error instanceof Error ? error.message : "Unable to delete the job.",
+      stack: error instanceof Error ? error.stack : null,
+      metadata: {
+        action: "delete_job",
+      },
+    });
     return {
       status: "error",
       message: error instanceof Error ? error.message : "Unable to delete the job.",
@@ -258,6 +327,18 @@ export async function generateInterviewPackAction(
       }
     }
 
+    await logError({
+      source: "validation",
+      message: "Interview pack generation validation failed.",
+      metadata: {
+        action: "generate_interview_pack",
+        issues: parsed.error.issues.map((issue) => ({
+          path: issue.path.join("."),
+          message: issue.message,
+        })),
+      },
+    });
+
     return returnGenerateError("Fix the highlighted fields to continue.", mappedErrors);
   }
 
@@ -286,6 +367,18 @@ export async function generateInterviewPackAction(
     const generationReservation = await reserveGenerationAccess(user.id, "generate");
 
     if (!generationReservation.allowed) {
+      if (generationReservation.reason === "daily_limit_reached") {
+        await logAuditEvent({
+          userId: user.id,
+          eventType: "daily_cap_reached",
+          metadata: {
+            action: "generate",
+            retryAfterSeconds: generationReservation.retryAfterSeconds,
+          },
+          requestHeaders: await headers(),
+        });
+      }
+
       return returnGenerateError(
         getGenerationReservationBlockedMessage(
           generationReservation.reason,
@@ -295,10 +388,20 @@ export async function generateInterviewPackAction(
     }
 
     hasActiveReservation = true;
+    await logAuditEvent({
+      userId: user.id,
+      eventType: "ai_generation_started",
+      metadata: {
+        title: parsed.data.title,
+        screenshotCount: validatedScreenshotFiles.length,
+        hasJobDescription: Boolean(parsed.data.jobDescription),
+      },
+      requestHeaders: await headers(),
+    });
 
     const screenshotDataUrls = await toImageDataUrls(validatedScreenshotFiles);
 
-    const aiResponse = await generateInterviewPack({
+    const aiResult = await generateInterviewPack({
       input: {
         ...parsed.data,
         cvText: resolvedCvText,
@@ -317,8 +420,8 @@ export async function generateInterviewPackAction(
       screenshotNames: parsed.data.screenshotNames,
       additionalInstructions: parsed.data.additionalInstructions,
       regenerationHistory: [],
-      aiResponse,
-    } as const;
+      aiResponse: aiResult.content,
+    };
 
     const pack = await createInterviewPackForUser(
       {
@@ -328,7 +431,21 @@ export async function generateInterviewPackAction(
       user.id,
     );
 
-    await consumeGenerationCreditAfterSuccess(user.id);
+    await consumeGenerationCreditAfterSuccess(user.id, aiResult.usage);
+    await logAuditEvent({
+      userId: user.id,
+      eventType: "ai_generation_completed",
+      metadata: {
+        packId: pack.id,
+        title: pack.title,
+        modelName: aiResult.usage.modelName,
+        promptTokens: aiResult.usage.promptTokens,
+        completionTokens: aiResult.usage.completionTokens,
+        totalTokens: aiResult.usage.totalTokens,
+        estimatedCostGbp: aiResult.usage.estimatedCostGbp,
+      },
+      requestHeaders: await headers(),
+    });
 
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/packs");
@@ -339,15 +456,57 @@ export async function generateInterviewPackAction(
       pack,
     };
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to generate interview pack.";
+
+    if (isUploadRelatedMessage(message)) {
+      await logAuditEvent({
+        userId: user.id,
+        eventType: "upload_failed",
+        metadata: {
+          action: "generate",
+          message,
+        },
+        requestHeaders: await headers(),
+      });
+      await logError({
+        userId: user.id,
+        source: "upload",
+        message,
+        stack: error instanceof Error ? error.stack : null,
+        metadata: {
+          action: "generate_interview_pack",
+        },
+        requestHeaders: await headers(),
+      });
+    } else {
+      await logAuditEvent({
+        userId: user.id,
+        eventType: "ai_generation_failed",
+        metadata: {
+          title: parsed.data.title,
+          message,
+        },
+        requestHeaders: await headers(),
+      });
+      await logError({
+        userId: user.id,
+        source: "ai_generation",
+        message,
+        stack: error instanceof Error ? error.stack : null,
+        metadata: {
+          action: "generate_interview_pack",
+          title: parsed.data.title,
+        },
+        requestHeaders: await headers(),
+      });
+    }
+
     if (hasActiveReservation) {
-      await refundGenerationCreditAfterFailure(
-        user.id,
-        error instanceof Error ? error.message : "Unable to generate interview pack.",
-      );
+      await refundGenerationCreditAfterFailure(user.id, message);
       hasActiveReservation = false;
     }
 
-    return returnGenerateError(error instanceof Error ? error.message : "Unable to generate interview pack.");
+    return returnGenerateError(message);
   }
 }
 
@@ -416,6 +575,17 @@ export async function regenerateInterviewPackAction(
 
   if (!parsed.success) {
     const additionalPromptError = parsed.error.issues.find((issue) => issue.path[0] === "additionalPrompt")?.message;
+    await logError({
+      source: "validation",
+      message: "Interview pack regeneration validation failed.",
+      metadata: {
+        action: "regenerate_interview_pack",
+        issues: parsed.error.issues.map((issue) => ({
+          path: issue.path.join("."),
+          message: issue.message,
+        })),
+      },
+    });
     return returnRegeneratePackError("Add guidance before regenerating this pack.", {
       additionalPrompt: additionalPromptError,
     });
@@ -440,6 +610,18 @@ export async function regenerateInterviewPackAction(
     const generationReservation = await reserveGenerationAccess(user.id, "regenerate");
 
     if (!generationReservation.allowed) {
+      if (generationReservation.reason === "daily_limit_reached") {
+        await logAuditEvent({
+          userId: user.id,
+          eventType: "daily_cap_reached",
+          metadata: {
+            action: "regenerate",
+            retryAfterSeconds: generationReservation.retryAfterSeconds,
+          },
+          requestHeaders: await headers(),
+        });
+      }
+
       return returnRegeneratePackError(
         getGenerationReservationBlockedMessage(
           generationReservation.reason,
@@ -449,6 +631,15 @@ export async function regenerateInterviewPackAction(
     }
 
     hasActiveReservation = true;
+    await logAuditEvent({
+      userId: user.id,
+      eventType: "regeneration_started",
+      metadata: {
+        packId: existingPack.id,
+        title: existingPack.title,
+      },
+      requestHeaders: await headers(),
+    });
 
     const generationContext = deriveInterviewPackGenerationContext(existingPack);
     const regenerationHistory = appendRegenerationInstruction(
@@ -456,7 +647,7 @@ export async function regenerateInterviewPackAction(
       parsed.data.additionalPrompt,
     );
 
-    const aiResponse = await regenerateInterviewPack({
+    const aiResult = await regenerateInterviewPack({
       context: generationContext,
       previousOutput: existingPack.ai_response,
       regenerationHistory,
@@ -467,10 +658,24 @@ export async function regenerateInterviewPackAction(
       additionalInstructions: parsed.data.additionalPrompt,
       generationContext,
       regenerationHistory,
-      aiResponse,
+      aiResponse: aiResult.content,
     });
 
-    await consumeGenerationCreditAfterSuccess(user.id);
+    await consumeGenerationCreditAfterSuccess(user.id, aiResult.usage);
+    await logAuditEvent({
+      userId: user.id,
+      eventType: "regeneration_completed",
+      metadata: {
+        packId: updatedPack.id,
+        title: updatedPack.title,
+        modelName: aiResult.usage.modelName,
+        promptTokens: aiResult.usage.promptTokens,
+        completionTokens: aiResult.usage.completionTokens,
+        totalTokens: aiResult.usage.totalTokens,
+        estimatedCostGbp: aiResult.usage.estimatedCostGbp,
+      },
+      requestHeaders: await headers(),
+    });
 
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/packs");
@@ -481,15 +686,35 @@ export async function regenerateInterviewPackAction(
       pack: updatedPack,
     };
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to regenerate this interview pack.";
+    await logError({
+      userId: user.id,
+      source: "regeneration",
+      message,
+      stack: error instanceof Error ? error.stack : null,
+      metadata: {
+        action: "regenerate_interview_pack",
+        packId: parsed.data.packId,
+      },
+      requestHeaders: await headers(),
+    });
+
     if (hasActiveReservation) {
-      await refundGenerationCreditAfterFailure(
-        user.id,
-        error instanceof Error ? error.message : "Unable to regenerate this interview pack.",
-      );
+      await logAuditEvent({
+        userId: user.id,
+        eventType: "ai_generation_failed",
+        metadata: {
+          action: "regenerate",
+          packId: parsed.data.packId,
+          message,
+        },
+        requestHeaders: await headers(),
+      });
+      await refundGenerationCreditAfterFailure(user.id, message);
       hasActiveReservation = false;
     }
 
-    return returnRegeneratePackError(error instanceof Error ? error.message : "Unable to regenerate this interview pack.");
+    return returnRegeneratePackError(message);
   }
 }
 
@@ -540,6 +765,17 @@ export async function createBillingCheckoutAction(
     if (isRedirectError(error)) {
       throw error;
     }
+
+    await logError({
+      userId: user.id,
+      source: "api",
+      message: error instanceof Error ? error.message : "Unable to start checkout.",
+      stack: error instanceof Error ? error.stack : null,
+      metadata: {
+        action: "create_billing_checkout",
+      },
+      requestHeaders: await headers(),
+    });
 
     return returnBillingCheckoutError(error instanceof Error ? error.message : "Unable to start checkout.");
   }

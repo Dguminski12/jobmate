@@ -31,6 +31,19 @@ export type InterviewPackContent = {
   promptDrivenExtras: string[];
 };
 
+export type InterviewPackUsage = {
+  modelName: string;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  estimatedCostGbp: number;
+};
+
+export type InterviewPackGenerationResult = {
+  content: InterviewPackContent;
+  usage: InterviewPackUsage;
+};
+
 export type InterviewPackUploadedFile = {
   kind: "cv" | "job_screenshot";
   name: string;

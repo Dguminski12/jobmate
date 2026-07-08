@@ -2,8 +2,14 @@ import "server-only";
 
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { dashboardFiltersSchema, deleteJobSchema, createJobSchema, updateJobSchema } from "./validation";
-import type { DashboardFiltersInput, JobRecord } from "./types";
+import {
+  dashboardFiltersSchema,
+  deleteJobSchema,
+  type DashboardFiltersInput,
+  createJobSchema,
+  updateJobSchema,
+} from "./validation";
+import type { JobRecord } from "./types";
 
 function buildSearchTerm(search: string) {
   return search.replace(/[%(),]/g, " ").trim();
@@ -23,7 +29,7 @@ export async function getAuthedClient() {
 }
 
 function sortJobsQuery(
-  query: ReturnType<ReturnType<typeof createSupabaseServerClient>["from"]>,
+  query: any,
   sort: DashboardFiltersInput["sort"],
 ) {
   switch (sort) {

@@ -7,7 +7,10 @@ const supportedScreenshotMimeTypes = ["image/png", "image/jpeg", "image/webp"];
 
 async function getPdfParser() {
   const importedModule = await import("pdf-parse");
-  return (importedModule.default ?? importedModule) as (buffer: Buffer) => Promise<{ text: string }>;
+  const candidate = importedModule as unknown as {
+    default?: (buffer: Buffer) => Promise<{ text: string }>;
+  };
+  return (candidate.default ?? importedModule) as (buffer: Buffer) => Promise<{ text: string }>;
 }
 
 async function getDocxParser() {

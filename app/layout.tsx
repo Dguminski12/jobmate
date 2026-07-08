@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import type { Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
+import CookieNotice from "@/components/legal/cookie-notice";
+import SiteFooter from "@/components/legal/site-footer";
 import PwaRegister from "@/components/pwa/pwa-register";
 import "./globals.css";
 
@@ -49,6 +51,8 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col">
         {children}
+        <SiteFooter />
+        <CookieNotice />
         <PwaRegister />
       </body>
     </html>

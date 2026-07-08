@@ -4,19 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
 
-const navItems = [
-  {
-    href: "/dashboard/packs",
-    title: "Interview Packs",
-    description: "Generate and review prep packs",
-  },
-  {
-    href: "/dashboard/tracker",
-    title: "Job Tracker",
-    description: "Manage applications and follow-ups",
-  },
-] as const;
-
 function itemClasses(active: boolean) {
   if (active) {
     return "border-slate-900 bg-slate-900 text-white dark:border-cyan-300/70 dark:bg-cyan-300/20 dark:text-cyan-100 dark:shadow-[0_10px_30px_rgba(34,211,238,0.25)]";
@@ -29,14 +16,39 @@ function itemDescriptionClasses(active: boolean) {
   return active ? "text-slate-300 dark:text-cyan-100/85" : "text-slate-500 dark:text-slate-400";
 }
 
-export default function DashboardNavigation() {
+export default function DashboardNavigation({ showAdminLink = false }: { showAdminLink?: boolean }) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navItems = useMemo(
+    () =>
+      [
+        {
+          href: "/dashboard/packs",
+          title: "Interview Packs",
+          description: "Generate and review prep packs",
+        },
+        {
+          href: "/dashboard/tracker",
+          title: "Job Tracker",
+          description: "Manage applications and follow-ups",
+        },
+        ...(showAdminLink
+          ? [
+              {
+                href: "/admin",
+                title: "Admin",
+                description: "View release metrics and logs",
+              },
+            ]
+          : []),
+      ] as const,
+    [showAdminLink],
+  );
 
   const activeTitle = useMemo(() => {
     const currentItem = navItems.find((item) => pathname.startsWith(item.href));
     return currentItem?.title ?? "Dashboard";
-  }, [pathname]);
+  }, [navItems, pathname]);
 
   return (
     <>

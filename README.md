@@ -11,6 +11,9 @@ SUPABASE_SERVICE_ROLE_KEY=...
 OPENAI_API_KEY=...
 # Optional, defaults to gpt-4.1-mini
 OPENAI_MODEL=gpt-4.1-mini
+# Optional, override the built-in GBP cost estimate used in the admin dashboard
+OPENAI_INPUT_COST_PER_MILLION_GBP=0.32
+OPENAI_OUTPUT_COST_PER_MILLION_GBP=1.28
 STRIPE_SECRET_KEY=...
 STRIPE_WEBHOOK_SECRET=...
 # Optional in local dev, defaults to http://localhost:3000
@@ -28,6 +31,8 @@ For production, do not commit secrets into the repository. Add the same variable
 - `SUPABASE_SERVICE_ROLE_KEY`: required for Stripe webhook writes into Supabase
 - `OPENAI_API_KEY`: optional, enables live Interview Pack generation
 - `OPENAI_MODEL`: optional, defaults to `gpt-4.1-mini`
+- `OPENAI_INPUT_COST_PER_MILLION_GBP`: optional, overrides the built-in admin cost estimate for prompt tokens
+- `OPENAI_OUTPUT_COST_PER_MILLION_GBP`: optional, overrides the built-in admin cost estimate for completion tokens
 - `STRIPE_SECRET_KEY`: required for checkout session creation
 - `STRIPE_WEBHOOK_SECRET`: required for verifying Stripe webhook callbacks
 - `NEXT_PUBLIC_APP_URL`: recommended for absolute checkout return URLs
@@ -38,7 +43,7 @@ If you're using Supabase auth, also add your deployed site URL to the allowed re
 
 ## Paywall Setup
 
-- Run the billing migration in [supabase/migrations/20260705_create_user_entitlements.sql](supabase/migrations/20260705_create_user_entitlements.sql).
+- Run the billing migration in [supabase/migrations/202607050002_create_user_entitlements.sql](supabase/migrations/202607050002_create_user_entitlements.sql).
 - The paywall currently allows 999 free generations per user for testing, and regenerations count toward the same limit.
 - After the free limit is reached, users can buy 31 days of unlimited access for GBP 9.99 through Stripe Checkout.
 - Configure a Stripe webhook endpoint pointing to `/api/stripe/webhook`.
@@ -55,6 +60,60 @@ stripe listen --forward-to localhost:3000/api/stripe/webhook
 - CV file parsing is implemented for PDF and DOCX uploads.
 - Screenshot uploads are passed to the AI request for OCR-style context extraction.
 - Generation is isolated behind one service so model/provider swaps are straightforward.
+
+## Admin setup
+
+JobMate now includes a protected admin dashboard at `/admin`.
+
+### How admin access works
+
+- Admin access is controlled by the `public.admin_users` table.
+- Route protection is enforced server-side before the admin page renders.
+- Admin-only tables and dashboard data are also protected by Supabase RLS policies.
+- The frontend does not receive the Supabase service role key.
+
+### Make a user an admin
+
+1. Find the user id in the Supabase Auth dashboard.
+2. Run this SQL in the Supabase SQL editor:
+
+```sql
+insert into public.admin_users (user_id)
+values ('YOUR-USER-UUID-HERE')
+on conflict (user_id) do nothing;
+```
+
+### Remove admin access
+
+Run:
+
+```sql
+delete from public.admin_users
+where user_id = 'YOUR-USER-UUID-HERE';
+```
+
+### Route to visit
+
+- After adding an admin user, visit `/admin`.
+
+### Required environment variables
+
+- No new required admin-only environment variable is needed beyond the existing `SUPABASE_SERVICE_ROLE_KEY`.
+- Optional token-cost estimate overrides:
+  - `OPENAI_INPUT_COST_PER_MILLION_GBP`
+  - `OPENAI_OUTPUT_COST_PER_MILLION_GBP`
+
+### How to test admin access
+
+1. Create or identify one normal user and one admin user.
+2. Add only the admin user to `public.admin_users`.
+3. Sign in as the admin and confirm `/admin` loads.
+4. Sign in as the normal user and confirm `/admin` redirects away.
+5. Generate and regenerate a few interview packs, then refresh `/admin` to confirm:
+   - audit logs update
+   - error logs populate on forced failures
+   - AI request rows and cost estimates appear
+   - recent users and generation counts update
 
 ## Getting Started
 

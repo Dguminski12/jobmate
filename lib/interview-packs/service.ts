@@ -2,9 +2,11 @@ import OpenAI from "openai";
 import { z } from "zod";
 import type {
   InterviewPackContent,
+  InterviewPackGenerationResult,
   InterviewPackGenerationContext,
   InterviewPackRegenerationInstruction,
 } from "./types";
+import { estimateUsageCostGbp } from "./usage";
 import type { GenerateInterviewPackInput } from "./validation";
 
 type GenerateInterviewPackRequest = {
@@ -146,7 +148,28 @@ function buildRegenerationUserPrompt(request: RegenerateInterviewPackRequest) {
   ].join("\n");
 }
 
-async function generateInterviewPackWithOpenAi(request: GenerateInterviewPackRequest): Promise<InterviewPackContent> {
+function buildUsageResult(
+  model: string,
+  usage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | undefined,
+) {
+  const promptTokens = usage?.prompt_tokens ?? 0;
+  const completionTokens = usage?.completion_tokens ?? 0;
+  const totalTokens = usage?.total_tokens ?? promptTokens + completionTokens;
+
+  return {
+    modelName: model,
+    promptTokens,
+    completionTokens,
+    totalTokens,
+    estimatedCostGbp: estimateUsageCostGbp(model, {
+      promptTokens,
+      completionTokens,
+      totalTokens,
+    }),
+  };
+}
+
+async function generateInterviewPackWithOpenAi(request: GenerateInterviewPackRequest): Promise<InterviewPackGenerationResult> {
   const client = getOpenAiClient();
 
   const model = process.env.OPENAI_MODEL ?? "gpt-4.1-mini";
@@ -188,12 +211,15 @@ async function generateInterviewPackWithOpenAi(request: GenerateInterviewPackReq
   }
 
   const parsedJson = JSON.parse(rawContent);
-  return interviewPackContentSchema.parse(parsedJson);
+  return {
+    content: interviewPackContentSchema.parse(parsedJson),
+    usage: buildUsageResult(model, completion.usage),
+  };
 }
 
 async function regenerateInterviewPackWithOpenAi(
   request: RegenerateInterviewPackRequest,
-): Promise<InterviewPackContent> {
+): Promise<InterviewPackGenerationResult> {
   const client = getOpenAiClient();
   const model = process.env.OPENAI_MODEL ?? "gpt-4.1-mini";
 
@@ -220,15 +246,18 @@ async function regenerateInterviewPackWithOpenAi(
   }
 
   const parsedJson = JSON.parse(rawContent);
-  return interviewPackContentSchema.parse(parsedJson);
+  return {
+    content: interviewPackContentSchema.parse(parsedJson),
+    usage: buildUsageResult(model, completion.usage),
+  };
 }
 
-export async function generateInterviewPack(request: GenerateInterviewPackRequest): Promise<InterviewPackContent> {
+export async function generateInterviewPack(request: GenerateInterviewPackRequest): Promise<InterviewPackGenerationResult> {
   return generateInterviewPackWithOpenAi(request);
 }
 
 export async function regenerateInterviewPack(
   request: RegenerateInterviewPackRequest,
-): Promise<InterviewPackContent> {
+): Promise<InterviewPackGenerationResult> {
   return regenerateInterviewPackWithOpenAi(request);
 }

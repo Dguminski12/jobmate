@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import SiteBrand from "@/components/brand/site-brand";
@@ -21,8 +22,14 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     .select("full_name")
     .eq("id", user.id)
     .maybeSingle();
+  const { data: adminMembership } = await supabase
+    .from("admin_users")
+    .select("user_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
 
   const displayName = profile?.full_name ?? user.user_metadata?.full_name ?? user.email ?? "there";
+  const showAdminLink = Boolean(adminMembership);
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(45,212,191,0.16),transparent_30%),linear-gradient(180deg,#f8fafc_0%,#eef5ff_100%)] px-4 py-6 text-slate-950 sm:px-6 sm:py-10">
@@ -38,13 +45,21 @@ export default async function DashboardLayout({ children }: { children: ReactNod
             </div>
 
             <div className="flex items-center gap-3 self-start md:self-auto">
+              {showAdminLink ? (
+                <Link
+                  href="/admin"
+                  className="rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-900 transition hover:border-cyan-300 hover:bg-cyan-100"
+                >
+                  Admin
+                </Link>
+              ) : null}
               <ThemeToggle />
               <SignOutButton />
             </div>
           </div>
 
           <div className="mt-6">
-            <DashboardNavigation />
+            <DashboardNavigation showAdminLink={showAdminLink} />
           </div>
         </header>
 

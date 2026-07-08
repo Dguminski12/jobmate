@@ -6,7 +6,7 @@ import { registerSchema, type RegisterFormValues } from "@/lib/validation/auth";
 
 type FieldErrors = Partial<Record<keyof RegisterFormValues, string>>;
 
-function parseFieldErrors(error: { issues: Array<{ path: Array<string | number>; message: string }> }) {
+function parseFieldErrors(error: { issues: Array<{ path: PropertyKey[]; message: string }> }) {
   const nextErrors: FieldErrors = {};
 
   for (const issue of error.issues) {
@@ -17,6 +17,20 @@ function parseFieldErrors(error: { issues: Array<{ path: Array<string | number>;
   }
 
   return nextErrors;
+}
+
+async function sendObservabilityEvent(path: "/api/observability/audit" | "/api/observability/error", body: Record<string, unknown>) {
+  try {
+    await fetch(path, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    // Ignore client-side logging failures.
+  }
 }
 
 export default function RegisterForm() {
@@ -58,8 +72,22 @@ export default function RegisterForm() {
 
       if (error) {
         setFormError(error.message);
+        void sendObservabilityEvent("/api/observability/error", {
+          source: "auth",
+          message: error.message,
+          metadata: {
+            action: "register",
+          },
+        });
         return;
       }
+
+      void sendObservabilityEvent("/api/observability/audit", {
+        eventType: "user_signed_up",
+        metadata: {
+          userId: data.user?.id ?? null,
+        },
+      });
 
       if (data.session) {
         window.location.assign("/dashboard/packs");

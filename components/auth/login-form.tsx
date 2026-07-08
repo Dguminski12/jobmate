@@ -6,7 +6,7 @@ import { loginSchema, type LoginFormValues } from "@/lib/validation/auth";
 
 type FieldErrors = Partial<Record<keyof LoginFormValues, string>>;
 
-function parseFieldErrors(error: { issues: Array<{ path: Array<string | number>; message: string }> }) {
+function parseFieldErrors(error: { issues: Array<{ path: PropertyKey[]; message: string }> }) {
   const nextErrors: FieldErrors = {};
 
   for (const issue of error.issues) {
@@ -17,6 +17,20 @@ function parseFieldErrors(error: { issues: Array<{ path: Array<string | number>;
   }
 
   return nextErrors;
+}
+
+async function sendErrorLog(body: Record<string, unknown>) {
+  try {
+    await fetch("/api/observability/error", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    // Ignore client-side logging failures.
+  }
 }
 
 export default function LoginForm() {
@@ -46,6 +60,13 @@ export default function LoginForm() {
 
       if (error) {
         setFormError(error.message);
+        void sendErrorLog({
+          source: "auth",
+          message: error.message,
+          metadata: {
+            action: "login",
+          },
+        });
         return;
       }
 
