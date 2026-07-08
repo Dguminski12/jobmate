@@ -56,9 +56,8 @@ export default function TermsPage() {
 
           <div>
             <h2 className="text-xl font-semibold text-slate-950">6. Refunds</h2>
-            {/* TODO: Replace this placeholder with the live refund policy before launch. */}
-            <p className="mt-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
-              TODO: Add the final refund policy wording and support process here before launch.
+            <p className="mt-2">
+              Payments for JobMate access are non-refundable except where a refund is required under applicable law.
             </p>
           </div>
 
@@ -69,6 +68,14 @@ export default function TermsPage() {
               TODO: Replace `support@yourdomain.com` with your real support contact before launch.
             </p>
             <p className="mt-2">Questions about these terms can be sent to `support@yourdomain.com`.</p>
+          </div>
+
+          <div>
+            <h2 className="text-xl font-semibold text-slate-950">8. Governing law</h2>
+            <p className="mt-2">
+              These terms are governed by the laws of England and Wales, unless mandatory local consumer law requires
+              otherwise.
+            </p>
           </div>
         </section>
       </div>

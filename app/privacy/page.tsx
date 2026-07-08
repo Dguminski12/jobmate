@@ -10,7 +10,7 @@ export default function PrivacyPage() {
         <p className="mt-4 text-sm leading-7 text-slate-600">
           This policy explains what information JobMate stores, why it is used, and the choices available to you.
           JobMate is a UK-focused AI job application app that helps users generate application and interview-prep
-          materials.
+          materials. For the purposes of this policy, references to JobMate mean the JobMate service and business.
         </p>
 
         <section className="mt-8 space-y-6 text-sm leading-7 text-slate-700">
@@ -61,14 +61,13 @@ export default function PrivacyPage() {
           <div>
             <h2 className="text-xl font-semibold text-slate-950">6. Payments</h2>
             <p className="mt-2">
-              If paid access is enabled, JobMate may share limited billing data with a payment provider so purchases can
-              be processed and access windows can be granted. JobMate does not intend to store full card details
-              directly on its own servers.
+              If paid access is enabled, JobMate shares limited billing data with Stripe so purchases can be processed
+              and access windows can be granted. JobMate does not intend to store full card details directly on its own
+              servers.
             </p>
-            {/* TODO: Replace this placeholder with the live payment provider details before launch. */}
-            <p className="mt-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
-              TODO: Insert the live payment provider name, billing support process and refund contact details here
-              before launch.
+            <p className="mt-2">
+              Stripe may process payment-related data under its own privacy and security standards in order to complete
+              transactions and support billing operations.
             </p>
           </div>
 
@@ -87,6 +86,14 @@ export default function PrivacyPage() {
               TODO: Replace `support@yourdomain.com` with your real privacy contact email before launch.
             </p>
             <p className="mt-2">Privacy requests can be sent to `support@yourdomain.com`.</p>
+          </div>
+
+          <div>
+            <h2 className="text-xl font-semibold text-slate-950">9. Applicable law</h2>
+            <p className="mt-2">
+              This policy is intended to sit alongside the laws of England and Wales and any applicable UK data
+              protection requirements.
+            </p>
           </div>
         </section>
       </div>
