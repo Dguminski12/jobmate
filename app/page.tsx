@@ -47,6 +47,10 @@ export default function Home() {
             Built for faster applications, sharper interviews, stronger answers.
           </div>
 
+          <div className="mb-4 inline-flex w-fit items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-900 shadow-sm">
+            Preview Build Test
+          </div>
+
           <h1 className="max-w-3xl text-5xl font-semibold tracking-tight text-slate-950 md:text-6xl lg:text-7xl">
             AI Job & Interview Coach for people who want to move faster.
           </h1>

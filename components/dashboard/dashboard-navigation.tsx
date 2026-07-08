@@ -36,7 +36,7 @@ export default function DashboardNavigation() {
   const activeTitle = useMemo(() => {
     const currentItem = navItems.find((item) => pathname.startsWith(item.href));
     return currentItem?.title ?? "Dashboard";
-  }, [navItems, pathname]);
+  }, [pathname]);
 
   return (
     <>

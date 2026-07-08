@@ -11,6 +11,10 @@ import {
 } from "./validation";
 import type { JobRecord } from "./types";
 
+type SortableJobsQuery = {
+  order: (column: string, options: { ascending: boolean }) => SortableJobsQuery;
+};
+
 function buildSearchTerm(search: string) {
   return search.replace(/[%(),]/g, " ").trim();
 }
@@ -29,7 +33,7 @@ export async function getAuthedClient() {
 }
 
 function sortJobsQuery(
-  query: any,
+  query: SortableJobsQuery,
   sort: DashboardFiltersInput["sort"],
 ) {
   switch (sort) {
