@@ -40,7 +40,7 @@ If you're using Supabase auth, also add your deployed site URL to the allowed re
 
 - Run the billing migration in [supabase/migrations/20260705_create_user_entitlements.sql](supabase/migrations/20260705_create_user_entitlements.sql).
 - The paywall currently allows 999 free generations per user for testing, and regenerations count toward the same limit.
-- After the free limit is reached, users can buy 31 days of unlimited access for £9.99 through Stripe Checkout.
+- After the free limit is reached, users can buy 31 days of unlimited access for GBP 9.99 through Stripe Checkout.
 - Configure a Stripe webhook endpoint pointing to `/api/stripe/webhook`.
 - In local development, run Stripe CLI forwarding so webhook events reach your app:
 
@@ -87,7 +87,7 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 
 ## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 

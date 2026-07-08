@@ -2,7 +2,7 @@ export const FREE_GENERATION_LIMIT = 999;
 export const PAID_ACCESS_DAYS = 31;
 export const PAYWALL_PRICE_PENCE = 999;
 export const PAYWALL_CURRENCY = "gbp";
-export const PAYWALL_PRICE_LABEL = "£9.99";
+export const PAYWALL_PRICE_LABEL = "GBP 9.99";
 
 export type UserEntitlementRecord = {
   user_id: string;

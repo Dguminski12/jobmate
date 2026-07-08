@@ -1,4 +1,9 @@
-import { FREE_GENERATION_LIMIT, type BillingAccessSummary, type UserEntitlementRecord } from "./types";
+import {
+  FREE_GENERATION_LIMIT,
+  PAYWALL_PRICE_LABEL,
+  type BillingAccessSummary,
+  type UserEntitlementRecord,
+} from "./types";
 
 type BillingSummaryRecord = Pick<UserEntitlementRecord, "free_generations_used" | "paid_access_until">;
 
@@ -19,5 +24,5 @@ export function hasGenerationAccess(summary: BillingAccessSummary) {
 }
 
 export function getPaywallBlockedMessage() {
-  return `Your ${FREE_GENERATION_LIMIT} free generations are used up. Unlock 31 days of unlimited generations and regenerations for £9.99.`;
+  return `Your ${FREE_GENERATION_LIMIT} free generations are used up. Unlock 31 days of unlimited generations and regenerations for ${PAYWALL_PRICE_LABEL}.`;
 }

@@ -232,7 +232,7 @@ export default function JobsDashboard({ jobs, filters }: JobsDashboardProps) {
                     <td className="px-4 py-4 font-semibold text-slate-950 whitespace-nowrap">{job.company}</td>
                     <td className="px-4 py-4 whitespace-nowrap">{job.job_title}</td>
                     <td className="px-4 py-4 whitespace-nowrap">{job.location}</td>
-                    <td className="px-4 py-4 whitespace-nowrap">{job.salary ?? "—"}</td>
+                    <td className="px-4 py-4 whitespace-nowrap">{job.salary ?? "Not set"}</td>
                     <td className="px-4 py-4 whitespace-nowrap">{job.employment_type}</td>
                     <td className="px-4 py-4 whitespace-nowrap">{formatDate(job.application_date)}</td>
                     <td className="px-4 py-4 whitespace-nowrap">
@@ -246,7 +246,7 @@ export default function JobsDashboard({ jobs, filters }: JobsDashboardProps) {
                           Open
                         </a>
                       ) : (
-                        "—"
+                        "Not set"
                       )}
                     </td>
                     <td className="max-w-[280px] px-4 py-4 align-top">
@@ -267,7 +267,7 @@ export default function JobsDashboard({ jobs, filters }: JobsDashboardProps) {
                           ) : null}
                         </div>
                       ) : (
-                        "—"
+                        "Not set"
                       )}
                     </td>
                     <td className="max-w-[240px] px-4 py-4 align-top">
@@ -288,7 +288,7 @@ export default function JobsDashboard({ jobs, filters }: JobsDashboardProps) {
                           ) : null}
                         </div>
                       ) : (
-                        "—"
+                        "Not set"
                       )}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">{formatDateTime(job.created_at)}</td>
@@ -335,7 +335,7 @@ export default function JobsDashboard({ jobs, filters }: JobsDashboardProps) {
                     <span className="font-semibold text-slate-950">Location:</span> {job.location}
                   </div>
                   <div>
-                    <span className="font-semibold text-slate-950">Salary:</span> {job.salary ?? "—"}
+                    <span className="font-semibold text-slate-950">Salary:</span> {job.salary ?? "Not set"}
                   </div>
                   <div>
                     <span className="font-semibold text-slate-950">Type:</span> {job.employment_type}
@@ -344,7 +344,7 @@ export default function JobsDashboard({ jobs, filters }: JobsDashboardProps) {
                     <span className="font-semibold text-slate-950">Applied:</span> {formatDate(job.application_date)}
                   </div>
                   <div>
-                    <span className="font-semibold text-slate-950">Next action:</span> {job.next_action ?? "—"}
+                    <span className="font-semibold text-slate-950">Next action:</span> {job.next_action ?? "Not set"}
                   </div>
                 </div>
 
