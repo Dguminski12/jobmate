@@ -39,6 +39,7 @@ yarn-error.log*
 # local agent tooling
 .agents/
 skills-lock.json
+/supabase/.temp/
 
 # typescript
 *.tsbuildinfo
