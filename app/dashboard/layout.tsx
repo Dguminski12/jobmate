@@ -59,7 +59,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           </div>
 
           <div className="mt-6">
-            <DashboardNavigation showAdminLink={showAdminLink} />
+            <DashboardNavigation />
           </div>
         </header>
 

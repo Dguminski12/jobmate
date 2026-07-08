@@ -16,34 +16,22 @@ function itemDescriptionClasses(active: boolean) {
   return active ? "text-slate-300 dark:text-cyan-100/85" : "text-slate-500 dark:text-slate-400";
 }
 
-export default function DashboardNavigation({ showAdminLink = false }: { showAdminLink?: boolean }) {
+const navItems = [
+  {
+    href: "/dashboard/packs",
+    title: "Interview Packs",
+    description: "Generate and review prep packs",
+  },
+  {
+    href: "/dashboard/tracker",
+    title: "Job Tracker",
+    description: "Manage applications and follow-ups",
+  },
+] as const;
+
+export default function DashboardNavigation() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const navItems = useMemo(
-    () =>
-      [
-        {
-          href: "/dashboard/packs",
-          title: "Interview Packs",
-          description: "Generate and review prep packs",
-        },
-        {
-          href: "/dashboard/tracker",
-          title: "Job Tracker",
-          description: "Manage applications and follow-ups",
-        },
-        ...(showAdminLink
-          ? [
-              {
-                href: "/admin",
-                title: "Admin",
-                description: "View release metrics and logs",
-              },
-            ]
-          : []),
-      ] as const,
-    [showAdminLink],
-  );
 
   const activeTitle = useMemo(() => {
     const currentItem = navItems.find((item) => pathname.startsWith(item.href));
