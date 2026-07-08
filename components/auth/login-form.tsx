@@ -24,6 +24,7 @@ export default function LoginForm() {
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -68,14 +69,23 @@ export default function LoginForm() {
       </label>
       <label className="block">
         <span className="mb-2 block text-sm font-medium text-slate-700">Password</span>
-        <input
-          type="password"
-          name="password"
-          autoComplete="current-password"
-          placeholder="Enter your password"
-          aria-invalid={Boolean(fieldErrors.password)}
-          className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-        />
+        <div className="relative">
+          <input
+            type={isPasswordVisible ? "text" : "password"}
+            name="password"
+            autoComplete="current-password"
+            placeholder="Enter your password"
+            aria-invalid={Boolean(fieldErrors.password)}
+            className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 pr-20 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+          />
+          <button
+            type="button"
+            onClick={() => setIsPasswordVisible((previous) => !previous)}
+            className="absolute inset-y-0 right-3 my-auto h-9 rounded-full px-3 text-sm font-semibold text-slate-600 transition hover:text-slate-950"
+          >
+            {isPasswordVisible ? "Hide" : "Show"}
+          </button>
+        </div>
         {fieldErrors.password ? (
           <p className="mt-2 text-sm text-rose-600">{fieldErrors.password}</p>
         ) : null}

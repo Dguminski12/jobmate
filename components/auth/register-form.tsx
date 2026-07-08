@@ -25,6 +25,8 @@ export default function RegisterForm() {
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -98,28 +100,46 @@ export default function RegisterForm() {
       </label>
       <label className="block">
         <span className="mb-2 block text-sm font-medium text-slate-700">Password</span>
-        <input
-          type="password"
-          name="password"
-          autoComplete="new-password"
-          placeholder="Create a password"
-          aria-invalid={Boolean(fieldErrors.password)}
-          className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-        />
+        <div className="relative">
+          <input
+            type={isPasswordVisible ? "text" : "password"}
+            name="password"
+            autoComplete="new-password"
+            placeholder="Create a password"
+            aria-invalid={Boolean(fieldErrors.password)}
+            className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 pr-20 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+          />
+          <button
+            type="button"
+            onClick={() => setIsPasswordVisible((previous) => !previous)}
+            className="absolute inset-y-0 right-3 my-auto h-9 rounded-full px-3 text-sm font-semibold text-slate-600 transition hover:text-slate-950"
+          >
+            {isPasswordVisible ? "Hide" : "Show"}
+          </button>
+        </div>
         {fieldErrors.password ? (
           <p className="mt-2 text-sm text-rose-600">{fieldErrors.password}</p>
         ) : null}
       </label>
       <label className="block">
         <span className="mb-2 block text-sm font-medium text-slate-700">Confirm password</span>
-        <input
-          type="password"
-          name="confirmPassword"
-          autoComplete="new-password"
-          placeholder="Repeat your password"
-          aria-invalid={Boolean(fieldErrors.confirmPassword)}
-          className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-        />
+        <div className="relative">
+          <input
+            type={isConfirmPasswordVisible ? "text" : "password"}
+            name="confirmPassword"
+            autoComplete="new-password"
+            placeholder="Repeat your password"
+            aria-invalid={Boolean(fieldErrors.confirmPassword)}
+            className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 pr-20 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
+          />
+          <button
+            type="button"
+            onClick={() => setIsConfirmPasswordVisible((previous) => !previous)}
+            className="absolute inset-y-0 right-3 my-auto h-9 rounded-full px-3 text-sm font-semibold text-slate-600 transition hover:text-slate-950"
+          >
+            {isConfirmPasswordVisible ? "Hide" : "Show"}
+          </button>
+        </div>
         {fieldErrors.confirmPassword ? (
           <p className="mt-2 text-sm text-rose-600">{fieldErrors.confirmPassword}</p>
         ) : null}
