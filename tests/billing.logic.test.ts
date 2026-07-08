@@ -56,4 +56,8 @@ describe("billing logic", () => {
   it("builds an in-progress message with retry timing", () => {
     expect(getGenerationReservationBlockedMessage("generation_in_progress", 45)).toContain("45 seconds");
   });
+
+  it("builds a daily limit message with retry timing", () => {
+    expect(getGenerationReservationBlockedMessage("daily_limit_reached", 60)).toContain("1 minute");
+  });
 });

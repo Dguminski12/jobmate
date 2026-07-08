@@ -50,6 +50,10 @@ export function getGenerationReservationBlockedMessage(reason: GenerationReserva
     return `Please wait ${formatRetryAfterSeconds(retryAfterSeconds)} before starting another generation.`;
   }
 
+  if (reason === "daily_limit_reached") {
+    return `You have reached today's generation limit. Try again in ${formatRetryAfterSeconds(retryAfterSeconds)}.`;
+  }
+
   if (reason === "unauthorized") {
     return "You are not authorized to generate content for this account.";
   }

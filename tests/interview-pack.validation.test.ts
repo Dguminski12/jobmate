@@ -49,4 +49,19 @@ describe("interview pack validation", () => {
 
     expect(parsed.success).toBe(false);
   });
+
+  it("rejects more than three screenshots", () => {
+    const parsed = generateInterviewPackSchema.safeParse({
+      title: "Test Pack",
+      cvMode: "text",
+      cvText: "A".repeat(100),
+      screenshotNames: ["1.png", "2.png", "3.png", "4.png"],
+    });
+
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      const screenshotIssue = parsed.error.issues.find((issue) => issue.path[0] === "screenshotNames");
+      expect(screenshotIssue?.message).toContain("up to 3 screenshots");
+    }
+  });
 });

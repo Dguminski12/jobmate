@@ -1,5 +1,9 @@
 const MAX_CV_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_JOB_SCREENSHOT_COUNT = 3;
+const MAX_JOB_SCREENSHOT_SIZE_BYTES = 4 * 1024 * 1024;
+const MAX_JOB_SCREENSHOT_TOTAL_SIZE_BYTES = 8 * 1024 * 1024;
 const supportedCvExtensions = [".pdf", ".docx"];
+const supportedScreenshotMimeTypes = ["image/png", "image/jpeg", "image/webp"];
 
 async function getPdfParser() {
   const importedModule = await import("pdf-parse");
@@ -66,11 +70,8 @@ export async function extractCvTextFromFile(file: File): Promise<string> {
 }
 
 export async function toImageDataUrls(files: File[]): Promise<string[]> {
-  const validFiles = files.filter((file) => file.size > 0 && file.type.startsWith("image/"));
-  const firstThree = validFiles.slice(0, 3);
-
   const dataUrls = await Promise.all(
-    firstThree.map(async (file) => {
+    files.map(async (file) => {
       const buffer = Buffer.from(await file.arrayBuffer());
       const mimeType = file.type || "image/png";
       return `data:${mimeType};base64,${buffer.toString("base64")}`;
@@ -78,4 +79,32 @@ export async function toImageDataUrls(files: File[]): Promise<string[]> {
   );
 
   return dataUrls;
+}
+
+export function validateJobScreenshotFiles(files: File[]) {
+  const nonEmptyFiles = files.filter((file) => file.size > 0);
+
+  if (nonEmptyFiles.length > MAX_JOB_SCREENSHOT_COUNT) {
+    throw new Error(`Upload up to ${MAX_JOB_SCREENSHOT_COUNT} screenshots per generation.`);
+  }
+
+  let totalSize = 0;
+
+  for (const file of nonEmptyFiles) {
+    if (!supportedScreenshotMimeTypes.includes(file.type)) {
+      throw new Error("Unsupported screenshot format. Use PNG, JPG, or WEBP images.");
+    }
+
+    if (file.size > MAX_JOB_SCREENSHOT_SIZE_BYTES) {
+      throw new Error("Each screenshot must be under 4MB.");
+    }
+
+    totalSize += file.size;
+  }
+
+  if (totalSize > MAX_JOB_SCREENSHOT_TOTAL_SIZE_BYTES) {
+    throw new Error("Combined screenshot uploads must be under 8MB.");
+  }
+
+  return nonEmptyFiles;
 }

@@ -2,6 +2,7 @@ import "server-only";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
+  DAILY_GENERATION_LIMIT,
   GENERATION_COOLDOWN_SECONDS,
   GENERATION_LOCK_SECONDS,
   FREE_GENERATION_LIMIT,
@@ -11,6 +12,8 @@ import {
   type UserEntitlementRecord,
 } from "./types";
 import { toBillingAccessSummary } from "./logic";
+
+type GenerationActionType = "generate" | "regenerate";
 
 async function getOrCreateEntitlementRecord(userId: string): Promise<UserEntitlementRecord> {
   const supabase = await createSupabaseServerClient();
@@ -111,11 +114,16 @@ type ReserveGenerationAccessRpcRow = {
   paid_access_until: string | null;
 };
 
-export async function reserveGenerationAccess(userId: string): Promise<GenerationReservationResult> {
+export async function reserveGenerationAccess(
+  userId: string,
+  actionType: GenerationActionType,
+): Promise<GenerationReservationResult> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("reserve_generation_access", {
     p_user_id: userId,
+    p_action_type: actionType,
     p_free_generation_limit: FREE_GENERATION_LIMIT,
+    p_daily_generation_limit: DAILY_GENERATION_LIMIT,
     p_cooldown_seconds: GENERATION_COOLDOWN_SECONDS,
     p_lock_seconds: GENERATION_LOCK_SECONDS,
   });
@@ -144,11 +152,18 @@ export async function reserveGenerationAccess(userId: string): Promise<Generatio
   };
 }
 
-export async function releaseGenerationReservation(userId: string, refundFreeGeneration: boolean) {
+export async function releaseGenerationReservation(
+  userId: string,
+  refundFreeGeneration: boolean,
+  wasSuccessful: boolean,
+  errorMessage?: string,
+) {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("release_generation_reservation", {
     p_user_id: userId,
     p_refund_free_generation: refundFreeGeneration,
+    p_was_successful: wasSuccessful,
+    p_error_message: errorMessage ?? null,
   });
 
   if (error) {

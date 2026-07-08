@@ -15,7 +15,7 @@ export const generateInterviewPackSchema = z
       z.string().url("Enter a valid job URL.").optional(),
     ),
     jobDescription: z.string().trim().max(20000).optional(),
-    screenshotNames: z.array(z.string().trim().min(1)).max(8),
+    screenshotNames: z.array(z.string().trim().min(1)).max(3, "Upload up to 3 screenshots."),
     additionalInstructions: z.string().trim().max(8000).optional(),
   })
   .superRefine((input, context) => {

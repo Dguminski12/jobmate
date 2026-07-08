@@ -38,7 +38,7 @@ import type {
   GenerateInterviewPackActionState,
   RegenerateInterviewPackActionState,
 } from "@/lib/interview-packs/types";
-import { extractCvTextFromFile, toImageDataUrls } from "@/lib/interview-packs/parsing";
+import { extractCvTextFromFile, toImageDataUrls, validateJobScreenshotFiles } from "@/lib/interview-packs/parsing";
 
 function collectFormData(formData: FormData) {
   return Object.fromEntries(formData.entries());
@@ -86,7 +86,7 @@ function returnBillingCheckoutError(message: string): BillingCheckoutActionState
 
 async function consumeGenerationCreditAfterSuccess(userId: string) {
   try {
-    await releaseGenerationReservation(userId, false);
+    await releaseGenerationReservation(userId, false, true);
   } catch (error) {
     console.error("[billing] Failed to release generation reservation after successful pack save", {
       userId,
@@ -95,9 +95,9 @@ async function consumeGenerationCreditAfterSuccess(userId: string) {
   }
 }
 
-async function refundGenerationCreditAfterFailure(userId: string) {
+async function refundGenerationCreditAfterFailure(userId: string, errorMessage?: string) {
   try {
-    await releaseGenerationReservation(userId, true);
+    await releaseGenerationReservation(userId, true, false, errorMessage);
   } catch (error) {
     console.error("[billing] Failed to refund generation reservation after pack failure", {
       userId,
@@ -263,6 +263,7 @@ export async function generateInterviewPackAction(
 
   const { user } = await getAuthedClient();
   let hasActiveReservation = false;
+  let validatedScreenshotFiles: File[] = [];
 
   try {
     let resolvedCvText = parsed.data.cvText ?? "";
@@ -281,7 +282,8 @@ export async function generateInterviewPackAction(
       }
     }
 
-    const generationReservation = await reserveGenerationAccess(user.id);
+    validatedScreenshotFiles = validateJobScreenshotFiles(screenshotFiles);
+    const generationReservation = await reserveGenerationAccess(user.id, "generate");
 
     if (!generationReservation.allowed) {
       return returnGenerateError(
@@ -294,7 +296,7 @@ export async function generateInterviewPackAction(
 
     hasActiveReservation = true;
 
-    const screenshotDataUrls = await toImageDataUrls(screenshotFiles);
+    const screenshotDataUrls = await toImageDataUrls(validatedScreenshotFiles);
 
     const aiResponse = await generateInterviewPack({
       input: {
@@ -338,7 +340,10 @@ export async function generateInterviewPackAction(
     };
   } catch (error) {
     if (hasActiveReservation) {
-      await refundGenerationCreditAfterFailure(user.id);
+      await refundGenerationCreditAfterFailure(
+        user.id,
+        error instanceof Error ? error.message : "Unable to generate interview pack.",
+      );
       hasActiveReservation = false;
     }
 
@@ -432,7 +437,7 @@ export async function regenerateInterviewPackAction(
       return returnRegeneratePackError("This pack has no saved CV text. Create a new pack from your CV first.");
     }
 
-    const generationReservation = await reserveGenerationAccess(user.id);
+    const generationReservation = await reserveGenerationAccess(user.id, "regenerate");
 
     if (!generationReservation.allowed) {
       return returnRegeneratePackError(
@@ -477,7 +482,10 @@ export async function regenerateInterviewPackAction(
     };
   } catch (error) {
     if (hasActiveReservation) {
-      await refundGenerationCreditAfterFailure(user.id);
+      await refundGenerationCreditAfterFailure(
+        user.id,
+        error instanceof Error ? error.message : "Unable to regenerate this interview pack.",
+      );
       hasActiveReservation = false;
     }
 
