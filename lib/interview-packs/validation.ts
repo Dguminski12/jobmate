@@ -37,16 +37,22 @@ export const generateInterviewPackSchema = z
       });
     }
 
-    const hasJobDetails =
-      Boolean(input.jobUrl && input.jobUrl.trim().length > 0) ||
-      Boolean(input.jobDescription && input.jobDescription.trim().length > 40) ||
-      input.screenshotNames.length > 0;
+    const hasJobDescription = Boolean(input.jobDescription && input.jobDescription.trim().length > 40);
+    const hasScreenshots = input.screenshotNames.length > 0;
 
-    if (!hasJobDetails) {
+    if (!hasJobDescription && !hasScreenshots) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["jobDescription"],
-        message: "Provide a job URL, a description, or at least one screenshot.",
+        message: "Provide either a job description or at least one screenshot.",
+      });
+    }
+
+    if (hasJobDescription && hasScreenshots) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["jobDescription"],
+        message: "Use either a job description or screenshots, not both.",
       });
     }
   });

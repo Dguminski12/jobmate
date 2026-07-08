@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   addInterviewPackToTrackerAction,
   createBillingCheckoutAction,
@@ -544,11 +544,13 @@ export default function InterviewPackWorkspace({
     deleteInterviewPackAction,
     deletePackInitialState,
   );
+  const formRef = useRef<HTMLFormElement>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [cvMode, setCvMode] = useState<"file" | "text">("file");
   const [cvFileName, setCvFileName] = useState<string | null>(null);
   const [cvText, setCvText] = useState<string | null>(null);
   const [screenshotNames, setScreenshotNames] = useState<string[]>([]);
+  const [clientFieldErrors, setClientFieldErrors] = useState<Partial<Record<"title" | "cvText" | "cvFile" | "jobDetails", string>>>({});
   const [selectedPackId, setSelectedPackId] = useState<string | null>(packs[0]?.id ?? null);
   const [isPackHidden, setIsPackHidden] = useState(false);
   const persistedCvDraft = usePersistedCvDraft();
@@ -633,7 +635,68 @@ export default function InterviewPackWorkspace({
     setIsPackHidden(false);
   }
 
+  function validateStepOne() {
+    const form = formRef.current;
+    const nextErrors: Partial<Record<"title" | "cvText" | "cvFile", string>> = {};
+    const title = form ? String(new FormData(form).get("title") ?? "").trim() : "";
+    const effectiveCvMode = submittedCvMode;
+
+    if (title.length < 3) {
+      nextErrors.title = "Enter a pack title.";
+    }
+
+    if (effectiveCvMode === "text") {
+      if (submittedCvText.trim().length < 80) {
+        nextErrors.cvText = "Paste at least 80 characters of CV content.";
+      }
+    } else if (!submittedCvFileName.trim() && submittedCvText.trim().length < 80) {
+      nextErrors.cvFile = "Upload a CV file (.pdf or .docx) or restore a saved CV.";
+    }
+
+    return nextErrors;
+  }
+
+  function validateStepTwo() {
+    const form = formRef.current;
+    const jobDescription = form ? String(new FormData(form).get("jobDescription") ?? "").trim() : "";
+    const hasJobDescription = jobDescription.length > 40;
+    const hasScreenshots = screenshotNames.length > 0;
+
+    if (!hasJobDescription && !hasScreenshots) {
+      return {
+        jobDetails: "Provide either a job description or at least one screenshot.",
+      };
+    }
+
+    if (hasJobDescription && hasScreenshots) {
+      return {
+        jobDetails: "Use either a job description or screenshots, not both.",
+      };
+    }
+
+    return {};
+  }
+
   function nextStep() {
+    if (currentStep === 1) {
+      const nextErrors = validateStepOne();
+
+      if (Object.keys(nextErrors).length > 0) {
+        setClientFieldErrors((previous) => ({ ...previous, ...nextErrors }));
+        return;
+      }
+    }
+
+    if (currentStep === 2) {
+      const nextErrors = validateStepTwo();
+
+      if (Object.keys(nextErrors).length > 0) {
+        setClientFieldErrors((previous) => ({ ...previous, ...nextErrors }));
+        return;
+      }
+    }
+
+    setClientFieldErrors({});
     setCurrentStep((previous) => Math.min(4, previous + 1));
   }
 
@@ -716,7 +779,7 @@ export default function InterviewPackWorkspace({
           </div>
         ) : null}
 
-        <form action={formAction} className="mt-6 space-y-6" noValidate>
+        <form ref={formRef} action={formAction} className="mt-6 space-y-6" noValidate>
           <input type="hidden" name="cvMode" value={submittedCvMode} />
           <input type="hidden" name="savedCvText" value={submittedCvText} />
           <input type="hidden" name="savedCvFileName" value={submittedCvFileName} />
@@ -727,9 +790,16 @@ export default function InterviewPackWorkspace({
                 <input
                   name="title"
                   placeholder="Senior Product Analyst - FinTech Interview Pack"
+                  onChange={() => {
+                    if (clientFieldErrors.title) {
+                      setClientFieldErrors((previous) => ({ ...previous, title: undefined }));
+                    }
+                  }}
                   className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
                 />
-                {state.fieldErrors?.title ? <p className="mt-2 text-sm text-rose-600">{state.fieldErrors.title}</p> : null}
+                {clientFieldErrors.title || state.fieldErrors?.title ? (
+                  <p className="mt-2 text-sm text-rose-600">{clientFieldErrors.title ?? state.fieldErrors?.title}</p>
+                ) : null}
               </label>
 
               <div className="grid gap-3 md:grid-cols-2">
@@ -765,11 +835,16 @@ export default function InterviewPackWorkspace({
                     className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 file:mr-3 file:rounded-full file:border-0 file:bg-slate-950 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
                     onChange={(event) => {
                       const file = event.currentTarget.files?.[0];
-                      setCvFileName(file?.name ?? null);
-                    }}
-                  />
+                    setCvFileName(file?.name ?? null);
+                    if (clientFieldErrors.cvFile) {
+                      setClientFieldErrors((previous) => ({ ...previous, cvFile: undefined }));
+                    }
+                  }}
+                />
                   {submittedCvFileName ? <p className="mt-2 text-xs text-slate-500">Selected: {submittedCvFileName}</p> : null}
-                  {state.fieldErrors?.cvFile ? <p className="mt-2 text-sm text-rose-600">{state.fieldErrors.cvFile}</p> : null}
+                  {clientFieldErrors.cvFile || state.fieldErrors?.cvFile ? (
+                    <p className="mt-2 text-sm text-rose-600">{clientFieldErrors.cvFile ?? state.fieldErrors?.cvFile}</p>
+                  ) : null}
                 </label>
               ) : (
                 <label className="block">
@@ -779,10 +854,18 @@ export default function InterviewPackWorkspace({
                     rows={8}
                     placeholder="Paste CV text..."
                     value={submittedCvText}
-                    onChange={(event) => setCvText(event.currentTarget.value)}
+                    onChange={(event) => {
+                      setCvText(event.currentTarget.value);
+
+                      if (clientFieldErrors.cvText) {
+                        setClientFieldErrors((previous) => ({ ...previous, cvText: undefined }));
+                      }
+                    }}
                     className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
                   />
-                  {state.fieldErrors?.cvText ? <p className="mt-2 text-sm text-rose-600">{state.fieldErrors.cvText}</p> : null}
+                  {clientFieldErrors.cvText || state.fieldErrors?.cvText ? (
+                    <p className="mt-2 text-sm text-rose-600">{clientFieldErrors.cvText ?? state.fieldErrors?.cvText}</p>
+                  ) : null}
                 </label>
               )}
           </div>
@@ -799,17 +882,22 @@ export default function InterviewPackWorkspace({
               </label>
 
               <label className="block">
-                <span className="mb-2 block text-sm font-medium text-slate-700">Job description text (optional)</span>
+                <span className="mb-2 block text-sm font-medium text-slate-700">Job description text</span>
                 <textarea
                   name="jobDescription"
                   rows={8}
                   placeholder="Paste job description here..."
+                  onChange={() => {
+                    if (clientFieldErrors.jobDetails) {
+                      setClientFieldErrors((previous) => ({ ...previous, jobDetails: undefined }));
+                    }
+                  }}
                   className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
                 />
               </label>
 
               <label className="block">
-                <span className="mb-2 block text-sm font-medium text-slate-700">Upload job advert screenshots (optional)</span>
+                <span className="mb-2 block text-sm font-medium text-slate-700">Upload job advert screenshots</span>
                 <input
                   type="file"
                   name="jobScreenshots"
@@ -819,6 +907,10 @@ export default function InterviewPackWorkspace({
                   onChange={(event) => {
                     const nextNames = Array.from(event.currentTarget.files ?? []).map((file) => file.name);
                     setScreenshotNames(nextNames);
+
+                    if (clientFieldErrors.jobDetails) {
+                      setClientFieldErrors((previous) => ({ ...previous, jobDetails: undefined }));
+                    }
                   }}
                 />
                 {screenshotNames.length > 0 ? (
@@ -828,7 +920,9 @@ export default function InterviewPackWorkspace({
                 )}
               </label>
 
-              {state.fieldErrors?.jobDetails ? <p className="text-sm text-rose-600">{state.fieldErrors.jobDetails}</p> : null}
+              {clientFieldErrors.jobDetails || state.fieldErrors?.jobDetails ? (
+                <p className="text-sm text-rose-600">{clientFieldErrors.jobDetails ?? state.fieldErrors?.jobDetails}</p>
+              ) : null}
           </div>
 
           <div className={currentStep === 3 ? "space-y-4" : "hidden space-y-4"}>
