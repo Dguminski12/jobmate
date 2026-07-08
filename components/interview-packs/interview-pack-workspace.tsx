@@ -143,6 +143,17 @@ function formatPaidAccessUntil(value: string) {
   }).format(new Date(value));
 }
 
+function formatRegenerationInstructionDate(value: string) {
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC",
+  }).format(new Date(value));
+}
+
 function getBillingStatusBannerClassName(message: string) {
   if (message.toLowerCase().includes("completed")) {
     return "mt-4 rounded-2xl border border-emerald-300 bg-emerald-100 px-4 py-3 text-sm font-semibold text-emerald-950 shadow-sm";
@@ -230,7 +241,7 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
             }`}
           >
             <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full border border-current text-xs">
-              {isDone ? "✓" : stepNumber}
+              {isDone ? "OK" : stepNumber}
             </span>
             {label}
           </div>
@@ -272,8 +283,9 @@ function InterviewPackView({
     addInterviewPackToTrackerAction,
     addToTrackerInitialState,
   );
-  const [additionalPrompt, setAdditionalPrompt] = useState(pack.additional_instructions ?? "");
+  const [additionalPrompt, setAdditionalPrompt] = useState("");
   const content = normalizeInterviewPackContent(pack.ai_response);
+  const regenerationHistory = pack.regeneration_history ?? [];
 
   function handleRegenerateAction(formData: FormData) {
     setAdditionalPrompt("");
@@ -287,7 +299,7 @@ function InterviewPackView({
           <div>
             <h3 className="text-lg font-semibold tracking-tight text-slate-950">Refine This Pack</h3>
             <p className="mt-2 text-sm text-slate-700">
-              Add a follow-up prompt and regenerate this pack with more focused guidance.
+              Add a follow-up prompt and regenerate this pack cumulatively. Each new edit builds on the original context and every prior instruction.
             </p>
           </div>
           <form
@@ -311,12 +323,29 @@ function InterviewPackView({
 
         <form action={handleRegenerateAction} className="mt-4">
           <input type="hidden" name="packId" value={pack.id} />
+          {regenerationHistory.length > 0 ? (
+            <div className="mb-4 rounded-2xl border border-slate-200 bg-white/80 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Regeneration History
+              </p>
+              <div className="mt-3 space-y-3">
+                {regenerationHistory.map((entry, index) => (
+                  <div key={`${entry.createdAt}-${index}`} className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+                    <p className="text-xs font-semibold text-slate-500">
+                      Edit {index + 1} · {formatRegenerationInstructionDate(entry.createdAt)}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-700">{entry.instruction}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <textarea
             name="additionalPrompt"
             rows={4}
             value={additionalPrompt}
             onChange={(event) => setAdditionalPrompt(event.target.value)}
-            placeholder="Example: Focus on leadership examples and keep outputs concise in UK English."
+            placeholder="Example: Mention welding experience at Dennisons and keep the tone concise."
             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400"
           />
           {regenerateState.fieldErrors?.additionalPrompt ? (

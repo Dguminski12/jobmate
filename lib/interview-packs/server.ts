@@ -50,6 +50,8 @@ export async function createInterviewPackForUser(input: CreateInterviewPackInput
       job_description: input.jobDescription ?? null,
       screenshot_names: input.screenshotNames,
       additional_instructions: input.additionalInstructions ?? null,
+      generation_context: input.generationContext,
+      regeneration_history: input.regenerationHistory,
       ai_response: input.aiResponse,
     })
     .select("*")
@@ -67,6 +69,8 @@ export async function updateInterviewPackForUser(
   userId: string,
   input: {
     additionalInstructions?: string;
+    generationContext?: InterviewPackRecord["generation_context"];
+    regenerationHistory?: InterviewPackRecord["regeneration_history"];
     aiResponse: InterviewPackContent;
   },
 ): Promise<InterviewPackRecord> {
@@ -76,6 +80,8 @@ export async function updateInterviewPackForUser(
     .from("interview_packs")
     .update({
       additional_instructions: input.additionalInstructions ?? null,
+      generation_context: input.generationContext ?? undefined,
+      regeneration_history: input.regenerationHistory ?? undefined,
       ai_response: input.aiResponse,
       status: "ready",
     })

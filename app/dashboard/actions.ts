@@ -17,7 +17,12 @@ import {
   getInterviewPackForUserById,
   updateInterviewPackForUser,
 } from "@/lib/interview-packs/server";
-import { generateInterviewPack } from "@/lib/interview-packs/service";
+import {
+  appendRegenerationInstruction,
+  createInterviewPackGenerationContext,
+  deriveInterviewPackGenerationContext,
+} from "@/lib/interview-packs/context";
+import { generateInterviewPack, regenerateInterviewPack } from "@/lib/interview-packs/service";
 import {
   deleteInterviewPackSchema,
   generateInterviewPackSchema,
@@ -139,7 +144,7 @@ export async function createJobAction(
 
   try {
     await createJobForUser(parsed.data, user.id);
-    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/tracker");
     return { status: "success", message: "Job created successfully." };
   } catch (error) {
     return returnFormError(error instanceof Error ? error.message : "Unable to create the job.");
@@ -160,7 +165,7 @@ export async function updateJobAction(
 
   try {
     await updateJobForUser(parsed.data, user.id);
-    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/tracker");
     return { status: "success", message: "Job updated successfully." };
   } catch (error) {
     return returnFormError(error instanceof Error ? error.message : "Unable to update the job.");
@@ -184,7 +189,7 @@ export async function deleteJobAction(
 
   try {
     await deleteJobForUser(parsed.data, user.id);
-    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/tracker");
     return { status: "success", message: "Job deleted successfully." };
   } catch (error) {
     return {
@@ -277,17 +282,23 @@ export async function generateInterviewPackAction(
       screenshotDataUrls,
     });
 
+    const createPackInput = {
+      title: parsed.data.title,
+      cvSource: parsed.data.cvMode,
+      cvFileName: resolvedCvFileName,
+      cvText: resolvedCvText,
+      jobUrl: parsed.data.jobUrl,
+      jobDescription: parsed.data.jobDescription,
+      screenshotNames: parsed.data.screenshotNames,
+      additionalInstructions: parsed.data.additionalInstructions,
+      regenerationHistory: [],
+      aiResponse,
+    } as const;
+
     const pack = await createInterviewPackForUser(
       {
-        title: parsed.data.title,
-        cvSource: parsed.data.cvMode,
-        cvFileName: resolvedCvFileName,
-        cvText: resolvedCvText,
-        jobUrl: parsed.data.jobUrl,
-        jobDescription: parsed.data.jobDescription,
-        screenshotNames: parsed.data.screenshotNames,
-        additionalInstructions: parsed.data.additionalInstructions,
-        aiResponse,
+        ...createPackInput,
+        generationContext: createInterviewPackGenerationContext(createPackInput),
       },
       user.id,
     );
@@ -398,25 +409,23 @@ export async function regenerateInterviewPackAction(
       return returnRegeneratePackError(getPaywallBlockedMessage());
     }
 
-    const aiResponse = await generateInterviewPack({
-      input: {
-        title: existingPack.title,
-        cvMode: existingPack.cv_source,
-        cvText: resolvedCvText,
-        cvFileName: existingPack.cv_file_name ?? undefined,
-        savedCvText: resolvedCvText,
-        savedCvFileName: existingPack.cv_file_name ?? undefined,
-        jobUrl: existingPack.job_url ?? undefined,
-        jobDescription: existingPack.job_description ?? undefined,
-        screenshotNames: existingPack.screenshot_names ?? [],
-        additionalInstructions: parsed.data.additionalPrompt,
-      },
-      cvText: resolvedCvText,
-      screenshotDataUrls: [],
+    const generationContext = deriveInterviewPackGenerationContext(existingPack);
+    const regenerationHistory = appendRegenerationInstruction(
+      existingPack.regeneration_history,
+      parsed.data.additionalPrompt,
+    );
+
+    const aiResponse = await regenerateInterviewPack({
+      context: generationContext,
+      previousOutput: existingPack.ai_response,
+      regenerationHistory,
+      latestInstruction: parsed.data.additionalPrompt,
     });
 
     const updatedPack = await updateInterviewPackForUser(existingPack.id, user.id, {
       additionalInstructions: parsed.data.additionalPrompt,
+      generationContext,
+      regenerationHistory,
       aiResponse,
     });
 
@@ -502,15 +511,8 @@ function buildCompanyNameFromUrl(url?: string | null) {
 }
 
 function buildJobTitleFromPack(packTitle: string) {
-  const separators = [" - ", " | ", " – "];
-
-  for (const separator of separators) {
-    if (packTitle.includes(separator)) {
-      return packTitle.split(separator)[0]?.trim() || packTitle;
-    }
-  }
-
-  return packTitle.trim();
+  const [jobTitle] = packTitle.split(/\s(?:\||-|\u2013)\s/, 1);
+  return jobTitle?.trim() || packTitle.trim();
 }
 
 function normalizeOptionalUrl(url?: string | null) {
@@ -570,7 +572,7 @@ export async function addInterviewPackToTrackerAction(
       user.id,
     );
 
-    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/tracker");
 
     return {
       status: "success",

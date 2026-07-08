@@ -31,6 +31,33 @@ export type InterviewPackContent = {
   promptDrivenExtras: string[];
 };
 
+export type InterviewPackUploadedFile = {
+  kind: "cv" | "job_screenshot";
+  name: string;
+};
+
+export type InterviewPackRegenerationInstruction = {
+  instruction: string;
+  createdAt: string;
+};
+
+export type InterviewPackGenerationContext = {
+  title: string;
+  jobDescription: string | null;
+  jobUrl: string | null;
+  userProfile: string | null;
+  resume: {
+    source: CVSource;
+    fileName: string | null;
+    text: string | null;
+  };
+  selectedTone: string | null;
+  outputType: string;
+  uploadedFiles: InterviewPackUploadedFile[];
+  initialPrompt: string | null;
+  generatedOutput: InterviewPackContent;
+};
+
 export type InterviewPackRecord = {
   id: string;
   user_id: string;
@@ -43,6 +70,8 @@ export type InterviewPackRecord = {
   job_description: string | null;
   screenshot_names: string[];
   additional_instructions: string | null;
+  generation_context: InterviewPackGenerationContext | null;
+  regeneration_history: InterviewPackRegenerationInstruction[];
   ai_response: InterviewPackContent;
   created_at: string;
   updated_at: string;
@@ -57,6 +86,8 @@ export type CreateInterviewPackInput = {
   jobDescription?: string;
   screenshotNames: string[];
   additionalInstructions?: string;
+  generationContext: InterviewPackGenerationContext;
+  regenerationHistory: InterviewPackRegenerationInstruction[];
   aiResponse: InterviewPackContent;
 };
 

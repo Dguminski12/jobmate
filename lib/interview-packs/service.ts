@@ -1,12 +1,23 @@
 import OpenAI from "openai";
 import { z } from "zod";
-import type { InterviewPackContent } from "./types";
+import type {
+  InterviewPackContent,
+  InterviewPackGenerationContext,
+  InterviewPackRegenerationInstruction,
+} from "./types";
 import type { GenerateInterviewPackInput } from "./validation";
 
 type GenerateInterviewPackRequest = {
   input: GenerateInterviewPackInput;
   cvText: string;
   screenshotDataUrls: string[];
+};
+
+type RegenerateInterviewPackRequest = {
+  context: InterviewPackGenerationContext;
+  previousOutput: InterviewPackContent;
+  regenerationHistory: InterviewPackRegenerationInstruction[];
+  latestInstruction: string;
 };
 
 const interviewPackContentSchema = z.object({
@@ -62,7 +73,7 @@ function buildUserPrompt(input: GenerateInterviewPackInput, cvText: string) {
   ].join("\n");
 }
 
-function buildSystemPrompt() {
+function buildInitialSystemPrompt() {
   return [
     "You are an expert interview coach and career strategist.",
     "Return valid JSON only with this exact shape:",
@@ -81,6 +92,57 @@ function buildSystemPrompt() {
     '  "promptDrivenExtras": string[]',
     "}",
     "Use practical, specific, concise language with UK spelling.",
+  ].join("\n");
+}
+
+function buildRegenerationSystemPrompt() {
+  return [
+    "You are an expert interview coach and career strategist.",
+    "You are editing an existing document. Preserve all existing improvements unless the latest instruction explicitly asks to remove or replace something.",
+    "If the latest instruction conflicts with an earlier instruction, apply the newest instruction only to the conflicting part and keep everything else intact.",
+    "Return valid JSON only with this exact shape:",
+    "{",
+    '  "coverLetter": string,',
+    '  "cvOptimisationSuggestions": string[],',
+    '  "atsKeywordAnalysis": { "summary": string, "matchedKeywords": string[], "missingKeywords": string[] },',
+    '  "companyResearch": string,',
+    '  "roleSummary": string,',
+    '  "likelyInterviewQuestions": string[],',
+    '  "starAnswerExamples": [{ "prompt": string, "situation": string, "task": string, "action": string, "result": string }],',
+    '  "technicalTopicsToRevise": string[],',
+    '  "salaryInsights": string,',
+    '  "questionsToAskInterviewer": string[],',
+    '  "interviewChecklist": string[],',
+    '  "promptDrivenExtras": string[]',
+    "}",
+    "Use practical, specific, concise language with UK spelling.",
+  ].join("\n");
+}
+
+function buildRegenerationUserPrompt(request: RegenerateInterviewPackRequest) {
+  const historyText =
+    request.regenerationHistory.length > 0
+      ? request.regenerationHistory
+          .map(
+            (entry, index) =>
+              `${index + 1}. ${entry.instruction} (added ${entry.createdAt})`,
+          )
+          .join("\n")
+      : "None";
+
+  return [
+    "Edit the existing interview pack using the original source context and the full cumulative instruction history.",
+    "",
+    "Original generation context:",
+    JSON.stringify(request.context, null, 2),
+    "",
+    "Previous generated output:",
+    JSON.stringify(request.previousOutput, null, 2),
+    "",
+    "Entire regeneration instruction history:",
+    historyText,
+    "",
+    `Latest instruction: ${request.latestInstruction}`,
   ].join("\n");
 }
 
@@ -110,7 +172,7 @@ async function generateInterviewPackWithOpenAi(request: GenerateInterviewPackReq
     messages: [
       {
         role: "system",
-        content: buildSystemPrompt(),
+        content: buildInitialSystemPrompt(),
       },
       {
         role: "user",
@@ -129,6 +191,44 @@ async function generateInterviewPackWithOpenAi(request: GenerateInterviewPackReq
   return interviewPackContentSchema.parse(parsedJson);
 }
 
+async function regenerateInterviewPackWithOpenAi(
+  request: RegenerateInterviewPackRequest,
+): Promise<InterviewPackContent> {
+  const client = getOpenAiClient();
+  const model = process.env.OPENAI_MODEL ?? "gpt-4.1-mini";
+
+  const completion = await client.chat.completions.create({
+    model,
+    temperature: 0.3,
+    response_format: { type: "json_object" },
+    messages: [
+      {
+        role: "system",
+        content: buildRegenerationSystemPrompt(),
+      },
+      {
+        role: "user",
+        content: buildRegenerationUserPrompt(request),
+      },
+    ],
+  });
+
+  const rawContent = completion.choices[0]?.message?.content;
+
+  if (!rawContent) {
+    throw new Error("AI regeneration returned an empty response.");
+  }
+
+  const parsedJson = JSON.parse(rawContent);
+  return interviewPackContentSchema.parse(parsedJson);
+}
+
 export async function generateInterviewPack(request: GenerateInterviewPackRequest): Promise<InterviewPackContent> {
   return generateInterviewPackWithOpenAi(request);
+}
+
+export async function regenerateInterviewPack(
+  request: RegenerateInterviewPackRequest,
+): Promise<InterviewPackContent> {
+  return regenerateInterviewPackWithOpenAi(request);
 }
