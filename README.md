@@ -1,159 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# JobMate
 
-## Environment Variables
+JobMate is a full-stack job-search workspace that combines application tracking with AI-generated interview preparation. It is the most production-oriented project in this portfolio, covering authentication, relational data, document parsing, payments, administration, observability, and automated tests.
 
-Add these values in `.env.local`:
+## Product features
+
+- Authenticated job application tracker with create, edit, and delete workflows
+- AI interview packs generated from a job description, CV, PDF/DOCX, or screenshot context
+- Saved pack history and usage tracking
+- Stripe Checkout paywall with webhook-driven entitlements
+- Protected admin dashboard for users, usage, costs, and billing data
+- Privacy, terms, cookie notice, theme switching, and PWA registration
+
+## Engineering highlights
+
+- Server-rendered Next.js application with TypeScript
+- Supabase authentication, Postgres data, and row-level security
+- Server-side validation with Zod
+- OpenAI integration isolated behind a service layer
+- PDF and DOCX parsing with explicit upload validation
+- Stripe webhook signature verification and service-role writes
+- Audit/error observability routes and admin reporting
+- Vitest coverage for billing, jobs, interview packs, and observability logic
+
+## Tech stack
+
+Next.js, React, TypeScript, Supabase, PostgreSQL, OpenAI API, Stripe, Zod, Tailwind CSS, and Vitest.
+
+## Run locally
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-SUPABASE_SERVICE_ROLE_KEY=...
-OPENAI_API_KEY=...
-# Optional, defaults to gpt-4.1-mini
-OPENAI_MODEL=gpt-4.1-mini
-# Optional, override the built-in GBP cost estimate used in the admin dashboard
-OPENAI_INPUT_COST_PER_MILLION_GBP=0.32
-OPENAI_OUTPUT_COST_PER_MILLION_GBP=1.28
-STRIPE_SECRET_KEY=...
-STRIPE_WEBHOOK_SECRET=...
-# Optional in local dev, defaults to http://localhost:3000
+git clone https://github.com/Dguminski12/jobmate.git
+cd jobmate
+npm install
+```
+
+Create `.env.local` with your own credentials:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+OPENAI_API_KEY=
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-`OPENAI_API_KEY` is required for Interview Pack generation.
-
-## Deployment Variables
-
-For production, do not commit secrets into the repository. Add the same variables in your hosting provider's environment settings instead:
-
-- `NEXT_PUBLIC_SUPABASE_URL`: your Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: your Supabase anon/public key
-- `SUPABASE_SERVICE_ROLE_KEY`: required for Stripe webhook writes into Supabase
-- `OPENAI_API_KEY`: optional, enables live Interview Pack generation
-- `OPENAI_MODEL`: optional, defaults to `gpt-4.1-mini`
-- `OPENAI_INPUT_COST_PER_MILLION_GBP`: optional, overrides the built-in admin cost estimate for prompt tokens
-- `OPENAI_OUTPUT_COST_PER_MILLION_GBP`: optional, overrides the built-in admin cost estimate for completion tokens
-- `STRIPE_SECRET_KEY`: required for checkout session creation
-- `STRIPE_WEBHOOK_SECRET`: required for verifying Stripe webhook callbacks
-- `NEXT_PUBLIC_APP_URL`: recommended for absolute checkout return URLs
-
-On Vercel, set them in your project settings under Environment Variables, then redeploy.
-
-If you're using Supabase auth, also add your deployed site URL to the allowed redirect and site URL settings in the Supabase dashboard.
-
-## Paywall Setup
-
-- Run the billing migration in [supabase/migrations/202607050002_create_user_entitlements.sql](supabase/migrations/202607050002_create_user_entitlements.sql).
-- The paywall currently allows 999 free generations per user for testing, and regenerations count toward the same limit.
-- After the free limit is reached, users can buy 31 days of unlimited access for GBP 9.99 through Stripe Checkout.
-- Configure a Stripe webhook endpoint pointing to `/api/stripe/webhook`.
-- In local development, run Stripe CLI forwarding so webhook events reach your app:
-
-```bash
-stripe listen --forward-to localhost:3000/api/stripe/webhook
-```
-
-- Copy the signing secret from Stripe CLI or the Stripe dashboard into `STRIPE_WEBHOOK_SECRET`.
-
-## Interview Pack Generation
-
-- CV file parsing is implemented for PDF and DOCX uploads.
-- Screenshot uploads are passed to the AI request for OCR-style context extraction.
-- Generation is isolated behind one service so model/provider swaps are straightforward.
-
-## Admin setup
-
-JobMate now includes a protected admin dashboard at `/admin`.
-
-### How admin access works
-
-- Admin access is controlled by the `public.admin_users` table.
-- Route protection is enforced server-side before the admin page renders.
-- Admin-only tables and dashboard data are also protected by Supabase RLS policies.
-- The frontend does not receive the Supabase service role key.
-
-### Make a user an admin
-
-1. Find the user id in the Supabase Auth dashboard.
-2. Run this SQL in the Supabase SQL editor:
-
-```sql
-insert into public.admin_users (user_id)
-values ('YOUR-USER-UUID-HERE')
-on conflict (user_id) do nothing;
-```
-
-### Remove admin access
-
-Run:
-
-```sql
-delete from public.admin_users
-where user_id = 'YOUR-USER-UUID-HERE';
-```
-
-### Route to visit
-
-- After adding an admin user, visit `/admin`.
-
-### Required environment variables
-
-- No new required admin-only environment variable is needed beyond the existing `SUPABASE_SERVICE_ROLE_KEY`.
-- Optional token-cost estimate overrides:
-  - `OPENAI_INPUT_COST_PER_MILLION_GBP`
-  - `OPENAI_OUTPUT_COST_PER_MILLION_GBP`
-
-### How to test admin access
-
-1. Create or identify one normal user and one admin user.
-2. Add only the admin user to `public.admin_users`.
-3. Sign in as the admin and confirm `/admin` loads.
-4. Sign in as the normal user and confirm `/admin` redirects away.
-5. Generate and regenerate a few interview packs, then refresh `/admin` to confirm:
-   - audit logs update
-   - error logs populate on forced failures
-   - AI request rows and cost estimates appear
-   - recent users and generation counts update
-
-## Getting Started
-
-First, run the development server:
+Apply the migrations in `supabase/migrations`, configure the matching Supabase redirect URLs, then run:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Quality checks
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run lint
+npm test
+npm run build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Never commit live credentials. The service-role and Stripe keys are server-only.
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-### Quick checklist
-
-1. Push your code to GitHub.
-2. Import the repo into Vercel.
-3. Set the environment variables listed above in Vercel.
-4. Add your production domain to Supabase auth settings.
-5. Redeploy and share the URL with testers.
